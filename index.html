@@ -1,500 +1,158 @@
 <!DOCTYPE html>
+<!-- Declaração do tipo de documento: informa ao navegador que este é um arquivo HTML5 -->
+
 <html lang="pt-BR">
+<!-- Elemento raiz da página. lang="pt-BR" indica o idioma Português do Brasil -->
+
 <head>
+    <!-- Seção de configurações e metadados — não aparece visualmente na página -->
+
+    <!-- Suporte a letras acentuadas e caracteres especiais -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Configuração de visualização para dispositivos móveis:
+         - width=device-width: largura da página igual à largura do dispositivo
+         - initial-scale=1.0: zoom inicial de 100%
+         - maximum-scale=1.0: impede zoom acidental em campos de texto no iOS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+    <!-- Cor da barra do navegador em dispositivos Android -->
+    <meta name="theme-color" content="#4285f4">
+
+    <!-- Permite salvar a página na tela inicial como aplicativo (Android) -->
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Permite salvar a página na tela inicial como aplicativo (iOS) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <!-- Estilo da barra de status do iOS ao abrir como app -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+    <!-- Título exibido na aba do navegador -->
     <title>Lista de Compras</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        body {
-            background-color: #f5f5f5;
-            padding: 20px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            text-align: center;
-            margin-bottom: 20px;
-            color: #3a3a3a;
-        }
-        
-        .container {
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .voice-input {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        
-        .mic-button {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background-color: #4285f4;
-            border: none;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s ease;
-        }
-        
-        .mic-button:active {
-            background-color: #db4437;
-            transform: scale(1.1);
-        }
-        
-        .mic-button svg {
-            width: 24px;
-            height: 24px;
-            fill: white;
-        }
-        
-        .status {
-            text-align: center;
-            margin-top: 10px;
-            font-size: 14px;
-            color: #757575;
-            height: 20px;
-        }
-        
-        ul {
-            list-style: none;
-        }
-        
-        .item {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            align-items: center;
-            position: relative;
-        }
-        
-        .item-text {
-            flex: 1;
-            font-size: 16px;
-            color: #3a3a3a;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .item.checked .item-text {
-            text-decoration: line-through;
-            color: #9e9e9e;
-        }
-        
-        .item-price {
-            margin-left: 10px;
-            font-weight: bold;
-            color: #4caf50;
-            min-width: 60px;
-            text-align: right;
-        }
-        
-        .actions {
-            display: flex;
-            margin-left: 10px;
-        }
-        
-        .edit-btn, .price-btn, .delete-btn {
-            border: none;
-            background: none;
-            cursor: pointer;
-            padding: 5px;
-            margin-left: 5px;
-        }
-        
-        .edit-btn svg, .price-btn svg, .delete-btn svg {
-            width: 18px;
-            height: 18px;
-        }
-        
-        .edit-btn svg {
-            fill: #4285f4;
-        }
-        
-        .price-btn svg {
-            fill: #4caf50;
-        }
-        
-        .delete-btn svg {
-            fill: #db4437;
-        }
-        
-        .total {
-            text-align: right;
-            padding: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            border-top: 2px solid #eee;
-        }
-        
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .modal-content {
-            background-color: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 80%;
-            max-width: 300px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-        }
-        
-        .modal-title {
-            font-size: 18px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .modal input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .modal-btn {
-            padding: 10px 15px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        
-        .confirm-btn {
-            background-color: #4285f4;
-            color: white;
-        }
-        
-        .cancel-btn {
-            background-color: #f1f1f1;
-            color: #3a3a3a;
-        }
-        
-        .recording {
-            animation: pulse 1.5s infinite;
-        }
-        
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                background-color: #db4437;
-            }
-            50% {
-                transform: scale(1.1);
-                background-color: #db4437;
-            }
-            100% {
-                transform: scale(1);
-                background-color: #db4437;
-            }
-        }
-    </style>
+
+    <!-- Importa a folha de estilos externa -->
+    <link rel="stylesheet" href="estilos.css">
+
 </head>
+
 <body>
-    <h1>Lista de Compras</h1>
-    
-    <div class="container">
-        <div class="voice-input">
-            <button id="micButton" class="mic-button">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z" />
+    <!-- Corpo da página — tudo que o usuário vê está aqui -->
+
+    <!-- Div central que limita e centraliza o conteúdo na tela -->
+    <div class="pagina">
+
+        <!-- Título principal -->
+        <h1>Lista de Compras</h1>
+
+        <!-- Caixa de entrada: agrupa as formas de adicionar itens -->
+        <div class="caixa">
+
+            <!-- Seção de entrada por texto: campo + botão Adicionar -->
+            <div class="entrada-texto">
+
+                <!-- Campo onde o usuário digita o item.
+                     - autocomplete, autocorrect e spellcheck desativados
+                       para evitar sugestões indesejadas no celular -->
+                <input
+                    type="text"
+                    id="campoTexto"
+                    placeholder="Digite um item..."
+                    autocomplete="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                >
+
+                <!-- Botão que aciona a adição do item digitado -->
+                <button class="btn-adicionar" id="btnAdicionar">Adicionar</button>
+
+            </div><!-- fim .entrada-texto -->
+
+            <!-- Linha divisória entre as duas formas de entrada -->
+            <div class="separador">ou use o microfone</div>
+
+            <!-- Seção de entrada por voz: botão do microfone + status -->
+            <div class="entrada-voz">
+
+                <!-- Botão do microfone — pressione e segure para falar.
+                     Usa a imagem microphone.png como ícone -->
+                <button id="btnMicrofone" class="btn-microfone" title="Pressione e segure para falar">
+                    <img src="microphone.png" alt="Microfone" class="icone-microfone">
+                </button>
+
+                <!-- Texto que informa o estado atual do microfone.
+                     Atualizado dinamicamente pelo JavaScript -->
+                <div id="status" class="status">Pressione e segure para falar</div>
+
+            </div><!-- fim .entrada-voz -->
+
+        </div><!-- fim .caixa (entrada) -->
+
+
+        <!-- Caixa da lista: exibe os itens adicionados e o total -->
+        <div class="caixa">
+
+            <!-- Lista onde os itens são inseridos dinamicamente pelo JavaScript -->
+            <ul id="lista"></ul>
+
+            <!-- Exibe a soma dos preços de todos os itens -->
+            <div id="total" class="total">Total: R$ 0,00</div>
+
+        </div><!-- fim .caixa (lista) -->
+
+
+        <!-- Botão de impressão da lista.
+             Ao clicar, o JavaScript chama window.print() para abrir o diálogo de impressão.
+             O CSS de impressão (no estilos.css) controla o que aparece na folha impressa -->
+        <div class="area-impressao">
+            <button class="btn-imprimir" id="btnImprimir">
+                <!-- Ícone de impressora desenhado em SVG para melhor qualidade -->
+                <svg viewBox="0 0 24 24" class="icone-impressora">
+                    <path d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,12M16,19H8V15H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z" />
                 </svg>
+                Imprimir Lista
             </button>
-        </div>
-        <div id="status" class="status">Pressione e segure para falar</div>
-    </div>
-    
-    <div class="container">
-        <ul id="shoppingList"></ul>
-        <div id="total" class="total">Total: R$ 0,00</div>
-    </div>
-    
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-title">Editar Item</div>
-            <input type="text" id="editInput">
-            <div class="modal-buttons">
-                <button class="modal-btn cancel-btn" id="editCancelBtn">Cancelar</button>
-                <button class="modal-btn confirm-btn" id="editConfirmBtn">Confirmar</button>
+        </div><!-- fim .area-impressao -->
+
+    </div><!-- fim .pagina -->
+
+
+    <!-- ===================================================
+         MODAIS
+         Janelas flutuantes para editar nome e preço.
+         Começam ocultas e são exibidas pelo JavaScript.
+    =================================================== -->
+
+    <!-- Modal para editar o nome de um item -->
+    <div id="modalEditar" class="modal">
+        <div class="modal-conteudo">
+            <div class="modal-titulo">Editar Item</div>
+            <input type="text" id="campoEditar" autocomplete="off">
+            <div class="modal-botoes">
+                <button class="btn-modal btn-cancelar" id="cancelarEditar">Cancelar</button>
+                <button class="btn-modal btn-confirmar" id="confirmarEditar">Confirmar</button>
             </div>
         </div>
-    </div>
-    
-    <div id="priceModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-title">Editar Preço</div>
-            <input type="number" step="0.01" id="priceInput">
-            <div class="modal-buttons">
-                <button class="modal-btn cancel-btn" id="priceCancelBtn">Cancelar</button>
-                <button class="modal-btn confirm-btn" id="priceConfirmBtn">Confirmar</button>
+    </div><!-- fim #modalEditar -->
+
+    <!-- Modal para editar o preço de um item -->
+    <div id="modalPreco" class="modal">
+        <div class="modal-conteudo">
+            <div class="modal-titulo">Editar Preço</div>
+            <!-- inputmode="decimal" abre teclado numérico com vírgula no celular -->
+            <input type="number" step="0.01" min="0" id="campoPreco" inputmode="decimal">
+            <div class="modal-botoes">
+                <button class="btn-modal btn-cancelar" id="cancelarPreco">Cancelar</button>
+                <button class="btn-modal btn-confirmar" id="confirmarPreco">Confirmar</button>
             </div>
         </div>
-    </div>
-    
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elementos DOM
-            const micButton = document.getElementById('micButton');
-            const statusText = document.getElementById('status');
-            const shoppingList = document.getElementById('shoppingList');
-            const totalElement = document.getElementById('total');
-            const editModal = document.getElementById('editModal');
-            const priceModal = document.getElementById('priceModal');
-            const editInput = document.getElementById('editInput');
-            const priceInput = document.getElementById('priceInput');
-            const editCancelBtn = document.getElementById('editCancelBtn');
-            const editConfirmBtn = document.getElementById('editConfirmBtn');
-            const priceCancelBtn = document.getElementById('priceCancelBtn');
-            const priceConfirmBtn = document.getElementById('priceConfirmBtn');
-            
-            // Variáveis para controle
-            let recognition;
-            let isRecording = false;
-            let items = [];
-            let currentEditIndex = -1;
-            
-            // Carregar itens salvos
-            loadItems();
-            
-            // Inicializar reconhecimento de voz
-            if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR';
-                recognition.continuous = true;
-                recognition.interimResults = false;
-                
-                recognition.onresult = function(event) {
-                    const transcript = event.results[event.results.length - 1][0].transcript.trim();
-                    if (transcript) {
-                        addItem(transcript);
-                        statusText.textContent = `Adicionado: "${transcript}"`;
-                    }
-                };
-                
-                recognition.onerror = function(event) {
-                    statusText.textContent = 'Erro no reconhecimento de voz. Tente novamente.';
-                    stopRecording();
-                };
-                
-                recognition.onend = function() {
-                    if (isRecording) {
-                        recognition.start();
-                    }
-                };
-            } else {
-                statusText.textContent = 'Seu navegador não suporta reconhecimento de voz.';
-                micButton.disabled = true;
-            }
-            
-            // Eventos
-            micButton.addEventListener('mousedown', startRecording);
-            micButton.addEventListener('touchstart', function(e) {
-                e.preventDefault();
-                startRecording();
-            });
-            
-            micButton.addEventListener('mouseup', stopRecording);
-            micButton.addEventListener('touchend', stopRecording);
-            
-            editCancelBtn.addEventListener('click', closeEditModal);
-            editConfirmBtn.addEventListener('click', confirmEdit);
-            
-            priceCancelBtn.addEventListener('click', closePriceModal);
-            priceConfirmBtn.addEventListener('click', confirmPrice);
-            
-            // Funções para gerenciar itens
-            function addItem(name) {
-                const item = {
-                    name: name,
-                    price: 0,
-                    checked: false
-                };
-                
-                items.push(item);
-                renderItems();
-                saveItems();
-            }
-            
-            function renderItems() {
-                shoppingList.innerHTML = '';
-                
-                items.forEach((item, index) => {
-                    const li = document.createElement('li');
-                    li.className = item.checked ? 'item checked' : 'item';
-                    
-                    const itemText = document.createElement('div');
-                    itemText.className = 'item-text';
-                    itemText.textContent = item.name;
-                    itemText.addEventListener('click', () => toggleItemCheck(index));
-                    
-                    const itemPrice = document.createElement('div');
-                    itemPrice.className = 'item-price';
-                    itemPrice.textContent = formatPrice(item.price);
-                    
-                    const actions = document.createElement('div');
-                    actions.className = 'actions';
-                    
-                    const editBtn = createButton('edit-btn', 'Editar', '<svg viewBox="0 0 24 24"><path d="M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z" /></svg>', () => openEditModal(index));
-                    
-                    const priceBtn = createButton('price-btn', 'Preço', '<svg viewBox="0 0 24 24"><path d="M7,15H9C9,16.08 10.37,17 12,17C13.63,17 15,16.08 15,15C15,13.9 13.96,13.5 11.76,12.97C9.64,12.44 7,11.78 7,9C7,7.21 8.47,5.69 10.5,5.18V3H13.5V5.18C15.53,5.69 17,7.21 17,9H15C15,7.92 13.63,7 12,7C10.37,7 9,7.92 9,9C9,10.1 10.04,10.5 12.24,11.03C14.36,11.56 17,12.22 17,15C17,16.79 15.53,18.31 13.5,18.82V21H10.5V18.82C8.47,18.31 7,16.79 7,15Z" /></svg>', () => openPriceModal(index));
-                    
-                    const deleteBtn = createButton('delete-btn', 'Excluir', '<svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0,0 0,8 21H16A2,2 0,0 0,18 19V7H6V19Z" /></svg>', () => deleteItem(index));
-                    
-                    actions.appendChild(editBtn);
-                    actions.appendChild(priceBtn);
-                    actions.appendChild(deleteBtn);
-                    
-                    li.appendChild(itemText);
-                    li.appendChild(itemPrice);
-                    li.appendChild(actions);
-                    
-                    shoppingList.appendChild(li);
-                });
-                
-                updateTotal();
-            }
-            
-            function createButton(className, ariaLabel, svg, clickHandler) {
-                const button = document.createElement('button');
-                button.className = className;
-                button.setAttribute('aria-label', ariaLabel);
-                button.innerHTML = svg;
-                button.addEventListener('click', clickHandler);
-                return button;
-            }
-            
-            function toggleItemCheck(index) {
-                items[index].checked = !items[index].checked;
-                renderItems();
-                saveItems();
-            }
-            
-            function deleteItem(index) {
-                items.splice(index, 1);
-                renderItems();
-                saveItems();
-            }
-            
-            function openEditModal(index) {
-                currentEditIndex = index;
-                editInput.value = items[index].name;
-                editModal.style.display = 'flex';
-                editInput.focus();
-                // Seleciona todo o texto
-                editInput.select();
-            }
-            
-            function closeEditModal() {
-                editModal.style.display = 'none';
-                currentEditIndex = -1;
-            }
-            
-            function confirmEdit() {
-                if (currentEditIndex !== -1 && editInput.value.trim()) {
-                    items[currentEditIndex].name = editInput.value.trim();
-                    renderItems();
-                    saveItems();
-                    closeEditModal();
-                }
-            }
-            
-            function openPriceModal(index) {
-                currentEditIndex = index;
-                priceInput.value = items[index].price;
-                priceModal.style.display = 'flex';
-                priceInput.focus();
-                // Seleciona todo o valor para facilitar substituição
-                priceInput.select();
-            }
-            
-            function closePriceModal() {
-                priceModal.style.display = 'none';
-                currentEditIndex = -1;
-            }
-            
-            function confirmPrice() {
-                if (currentEditIndex !== -1) {
-                    const price = parseFloat(priceInput.value) || 0;
-                    items[currentEditIndex].price = price;
-                    renderItems();
-                    saveItems();
-                    closePriceModal();
-                }
-            }
-            
-            function updateTotal() {
-                const total = items.reduce((sum, item) => sum + item.price, 0);
-                totalElement.textContent = `Total: ${formatPrice(total)}`;
-            }
-            
-            function formatPrice(price) {
-                return `R$ ${price.toFixed(2).replace('.', ',')}`;
-            }
-            
-            function saveItems() {
-                localStorage.setItem('shoppingItems', JSON.stringify(items));
-            }
-            
-            function loadItems() {
-                const savedItems = localStorage.getItem('shoppingItems');
-                if (savedItems) {
-                    items = JSON.parse(savedItems);
-                    renderItems();
-                }
-            }
-            
-            function startRecording() {
-                if (recognition) {
-                    recognition.start();
-                    isRecording = true;
-                    micButton.classList.add('recording');
-                    statusText.textContent = 'Ouvindo...';
-                }
-            }
-            
-            function stopRecording() {
-                if (recognition) {
-                    recognition.stop();
-                    isRecording = false;
-                    micButton.classList.remove('recording');
-                    statusText.textContent = 'Pressione e segure para falar';
-                }
-            }
-        });
-    </script>
+    </div><!-- fim #modalPreco -->
+
+
+    <!-- JavaScript importado no final do body para garantir que o HTML
+         já esteja carregado antes de o script ser executado -->
+    <script src="aplicativo.js"></script>
+
 </body>
+
 </html>

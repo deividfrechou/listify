@@ -1,0 +1,558 @@
+/*
+=======================================================
+  ESTILOS.CSS — Folha de Estilos da Lista de Compras
+=======================================================
+  Organização:
+  1.  Reset e base
+  2.  Layout da página
+  3.  Caixas (cartões)
+  4.  Entrada por texto
+  5.  Separador
+  6.  Entrada por voz e ícone do microfone
+  7.  Lista de itens e ícones de ação
+  8.  Total
+  9.  Botão de impressão
+  10. Modais
+  11. Animação de gravação
+  12. Responsividade (tablet e desktop)
+  13. Estilos de impressão (@media print)
+=======================================================
+*/
+
+
+/* ===================================================
+   1. RESET E BASE
+   Zera estilos padrão do navegador para consistência.
+=================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;                   /* Borda e padding incluídos no tamanho do elemento */
+    -webkit-tap-highlight-color: transparent; /* Remove destaque azul ao tocar no celular */
+}
+
+html {
+    font-size: 16px; /* Tamanho de fonte base para toda a página */
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5; /* Fundo levemente cinzento */
+    min-height: 100vh;         /* Página ocupa pelo menos toda a altura da tela */
+    padding: 16px;
+}
+
+
+/* ===================================================
+   2. LAYOUT DA PÁGINA
+=================================================== */
+
+.pagina {
+    max-width: 600px;  /* Largura máxima para boa leitura em telas grandes */
+    margin: 0 auto;    /* Centraliza horizontalmente */
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 16px;
+    color: #3a3a3a;
+    font-size: clamp(1.3rem, 5vw, 1.8rem); /* Fonte fluida: adapta ao tamanho da tela */
+    padding-top: 8px;
+}
+
+
+/* ===================================================
+   3. CAIXAS (CARTOES)
+=================================================== */
+
+.caixa {
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08); /* Sombra suave */
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+
+/* ===================================================
+   4. ENTRADA POR TEXTO
+=================================================== */
+
+.entrada-texto {
+    display: flex;       /* Campo e botão lado a lado */
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.entrada-texto input {
+    flex: 1;             /* Campo ocupa todo o espaço disponível */
+    min-width: 0;        /* Evita overflow em telas pequenas */
+    padding: 12px 14px;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    font-size: clamp(15px, 4vw, 17px);
+    color: #3a3a3a;
+    background: #fafafa;
+    -webkit-appearance: none; /* Remove estilos padrão do iOS */
+    appearance: none;
+}
+
+/* Borda azul quando o campo está ativo (em foco) */
+.entrada-texto input:focus {
+    outline: none;
+    border-color: #4285f4;
+    background: white;
+}
+
+.btn-adicionar {
+    padding: 12px 18px;
+    background-color: #4285f4;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;       /* Evita que o texto quebre em duas linhas */
+    touch-action: manipulation;
+    min-height: 48px;          /* Área de toque mínima recomendada para mobile */
+}
+
+.btn-adicionar:active {
+    background-color: #2c6fd4;
+    transform: scale(0.97); /* Leve encolhimento ao pressionar */
+}
+
+
+/* ===================================================
+   5. SEPARADOR
+   Linha horizontal com texto entre as duas entradas.
+=================================================== */
+
+.separador {
+    text-align: center;
+    color: #bbb;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Linhas laterais geradas pelo CSS (sem elemento HTML extra) */
+.separador::before,
+.separador::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e0e0e0;
+}
+
+
+/* ===================================================
+   6. ENTRADA POR VOZ E ICONE DO MICROFONE
+   Botão circular com a imagem microphone.png.
+=================================================== */
+
+.entrada-voz {
+    display: flex;
+    flex-direction: column; /* Botão e status empilhados verticalmente */
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-microfone {
+    /* Tamanho fluido: mínimo 56px, ideal 14% da tela, máximo 72px */
+    width: clamp(56px, 14vw, 72px);
+    height: clamp(56px, 14vw, 72px);
+
+    border-radius: 50%;    /* Formato circular */
+    background-color: transparent; /* Fundo transparente pois a imagem já tem o círculo azul */
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: manipulation;
+    transition: transform 0.2s, opacity 0.2s;
+    -webkit-user-select: none; /* Impede seleção acidental do botão */
+    user-select: none;
+    padding: 0;
+    overflow: hidden; /* Garante que a imagem não ultrapasse o círculo */
+}
+
+/* A imagem do microfone ocupa todo o botão */
+.icone-microfone {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;     /* Imagem preenche o espaço sem distorcer */
+    border-radius: 50%;    /* Recorte circular para a imagem */
+    display: block;
+    pointer-events: none;  /* Cliques passam pela imagem até o botão */
+    /* Filtro para clarear levemente a imagem e indicar estado normal */
+    filter: brightness(1);
+    transition: filter 0.2s;
+}
+
+/* Texto de status abaixo do microfone */
+.status {
+    font-size: clamp(12px, 3.5vw, 14px);
+    color: #888;
+    text-align: center;
+    min-height: 20px; /* Reserva espaço mesmo quando o texto está vazio */
+}
+
+
+/* ===================================================
+   7. LISTA DE ITENS E ICONES DE ACAO
+   Cada linha tem: nome, preço e três botões com imagens.
+=================================================== */
+
+ul {
+    list-style: none; /* Remove marcadores padrão */
+}
+
+.item {
+    padding: 14px 8px;
+    border-bottom: 1px solid #f0f0f0; /* Linha entre itens */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Remove a borda do último item */
+.item:last-child {
+    border-bottom: none;
+}
+
+/* Nome do item — clicável para marcar/desmarcar */
+.item-nome {
+    flex: 1;
+    min-width: 0;                       /* Evita overflow em nomes longos */
+    font-size: clamp(15px, 4vw, 17px);
+    color: #3a3a3a;
+    cursor: pointer;
+    transition: color 0.2s;
+    word-break: break-word;             /* Quebra palavras muito longas */
+    padding: 4px 0;
+}
+
+/* Estilo quando o item está marcado como comprado */
+.item.marcado .item-nome {
+    text-decoration: line-through; /* Texto riscado */
+    color: #b0b0b0;
+}
+
+/* Preço do item */
+.item-preco {
+    font-weight: bold;
+    color: #4caf50; /* Verde */
+    font-size: clamp(13px, 3.5vw, 15px);
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+/* Grupo dos três botões de ação */
+.acoes {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0; /* Botões não encolhem em telas pequenas */
+}
+
+/* Estilo base dos três botões de ação */
+.btn-editar,
+.btn-preco,
+.btn-excluir {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 6px;          /* Área de toque maior que o ícone */
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    min-width: 36px;       /* Tamanho mínimo para toque acessível */
+    min-height: 36px;
+    transition: background 0.15s;
+}
+
+/* Fundos coloridos ao pressionar cada botão */
+.btn-editar:active  { background: #e8f0fe; } /* Azul claro */
+.btn-preco:active   { background: #e8f5e9; } /* Verde claro */
+.btn-excluir:active { background: #fce8e6; } /* Vermelho claro */
+
+/* Imagens dos ícones de ação (editar.png, dinheiro.png, excluir.png) */
+.icone-acao {
+    width: 22px;
+    height: 22px;
+    object-fit: contain; /* Mantém proporção da imagem sem recortar */
+    display: block;
+    pointer-events: none; /* Cliques passam pela imagem ao botão */
+}
+
+
+/* ===================================================
+   8. TOTAL
+   Soma dos preços exibida abaixo da lista.
+=================================================== */
+
+.total {
+    text-align: right;
+    padding: 14px 8px 4px;
+    font-size: clamp(16px, 4.5vw, 20px);
+    font-weight: bold;
+    border-top: 2px solid #f0f0f0;
+    color: #3a3a3a;
+}
+
+
+/* ===================================================
+   9. BOTAO DE IMPRESSAO
+   Aparece abaixo da lista e aciona window.print().
+   Fica oculto na impressão (ver seção @media print).
+=================================================== */
+
+.area-impressao {
+    display: flex;
+    justify-content: center; /* Centraliza o botão */
+    margin-top: 8px;
+    margin-bottom: 24px;
+}
+
+.btn-imprimir {
+    display: flex;
+    align-items: center;
+    gap: 10px;              /* Espaço entre o ícone e o texto */
+    padding: 13px 28px;
+    background-color: #ffffff;
+    color: #3a3a3a;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+    min-height: 48px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.btn-imprimir:hover {
+    background-color: #f0f4ff;
+    border-color: #4285f4;
+    color: #4285f4;
+}
+
+.btn-imprimir:active {
+    transform: scale(0.97);
+    background-color: #e8f0fe;
+}
+
+/* Ícone SVG da impressora dentro do botão */
+.icone-impressora {
+    width: 22px;
+    height: 22px;
+    fill: currentColor; /* Herda a cor do texto do botão */
+    flex-shrink: 0;
+}
+
+
+/* ===================================================
+   10. MODAIS
+   Janelas flutuantes para editar nome e preço.
+=================================================== */
+
+/* Fundo escuro semi-transparente que cobre a tela inteira */
+.modal {
+    display: none;      /* Oculto por padrão; JS troca para "flex" ao abrir */
+    position: fixed;    /* Fixo na tela, não rola com a página */
+    inset: 0;           /* Cobre tudo: top, right, bottom, left = 0 */
+    background-color: rgba(0,0,0,0.45);
+    z-index: 200;       /* Fica acima de todos os outros elementos */
+    align-items: flex-end; /* Em mobile, o modal sobe do fundo da tela */
+    justify-content: center;
+    padding: 16px;
+}
+
+/* Caixa branca dentro do modal */
+.modal-conteudo {
+    background-color: white;
+    padding: 24px 20px 20px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.modal-titulo {
+    font-size: clamp(16px, 4.5vw, 18px);
+    font-weight: bold;
+    margin-bottom: 16px;
+    text-align: center;
+    color: #3a3a3a;
+}
+
+.modal input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    border: 1.5px solid #ddd;
+    border-radius: 10px;
+    font-size: clamp(15px, 4vw, 17px);
+    color: #3a3a3a;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.modal input:focus {
+    outline: none;
+    border-color: #4285f4;
+}
+
+.modal-botoes {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-modal {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: clamp(14px, 4vw, 16px);
+    min-height: 48px;
+    touch-action: manipulation;
+}
+
+.btn-confirmar { background-color: #4285f4; color: white; }
+.btn-confirmar:active { background-color: #2c6fd4; }
+.btn-cancelar  { background-color: #f1f1f1; color: #3a3a3a; }
+.btn-cancelar:active { background-color: #e0e0e0; }
+
+
+/* ===================================================
+   11. ANIMACAO DE GRAVACAO
+   Botão do microfone pisca com brilho ao gravar.
+=================================================== */
+
+/* Classe adicionada pelo JavaScript durante a gravação */
+.gravando {
+    animation: piscar 1.2s infinite;
+}
+
+/* Animação que pulsa o brilho do botão enquanto grava */
+@keyframes piscar {
+    0%   { filter: brightness(0.85); transform: scale(1);    }
+    50%  { filter: brightness(1.15); transform: scale(1.1);  }
+    100% { filter: brightness(0.85); transform: scale(1);    }
+}
+
+
+/* ===================================================
+   12. RESPONSIVIDADE
+   Ajustes para tablets e desktops.
+=================================================== */
+
+/* Tablet: telas a partir de 480px */
+@media (min-width: 480px) {
+    body { padding: 24px 20px; }
+
+    /* Em telas maiores o modal fica centralizado verticalmente */
+    .modal { align-items: center; }
+
+    .caixa { padding: 24px; }
+}
+
+/* Desktop: telas a partir de 768px */
+@media (min-width: 768px) {
+    body { padding: 40px 24px; }
+    h1   { margin-bottom: 24px; }
+}
+
+
+/* ===================================================
+   13. ESTILOS DE IMPRESSAO
+   Regras aplicadas apenas quando o usuário manda imprimir
+   (Ctrl+P ou pelo botão "Imprimir Lista").
+   O objetivo é gerar uma folha limpa e legível.
+=================================================== */
+
+@media print {
+
+    /* Remove fundo colorido para economizar tinta */
+    body {
+        background-color: white;
+        padding: 0;
+        font-size: 12pt; /* Tamanho de fonte adequado para impressão */
+    }
+
+    /* Remove sombras e bordas arredondadas das caixas na impressão */
+    .caixa {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        border-radius: 0;
+        margin-bottom: 12pt;
+        padding: 12pt;
+    }
+
+    /* Oculta os elementos que não fazem sentido no papel */
+    .entrada-texto,    /* Campo de digitação */
+    .separador,        /* Linha "ou use o microfone" */
+    .entrada-voz,      /* Botão do microfone e status */
+    .acoes,            /* Botões editar, preço e excluir */
+    .area-impressao,   /* Botão "Imprimir Lista" */
+    .modal             /* Modais flutuantes */
+    {
+        display: none !important;
+    }
+
+    /* Garante que o título apareça na impressão */
+    h1 {
+        font-size: 18pt;
+        margin-bottom: 12pt;
+        color: black;
+    }
+
+    /* Itens da lista na impressão */
+    .item {
+        padding: 8pt 4pt;
+        border-bottom: 1px solid #ddd;
+        page-break-inside: avoid; /* Evita que um item seja cortado entre duas páginas */
+    }
+
+    /* Nome do item em preto para melhor legibilidade */
+    .item-nome {
+        font-size: 12pt;
+        color: black;
+    }
+
+    /* Mantém o texto riscado nos itens já marcados */
+    .item.marcado .item-nome {
+        text-decoration: line-through;
+        color: #888;
+    }
+
+    /* Preço em preto na impressão */
+    .item-preco {
+        font-size: 11pt;
+        color: black;
+    }
+
+    /* Total em destaque */
+    .total {
+        font-size: 14pt;
+        color: black;
+        border-top: 2px solid #333;
+        padding-top: 8pt;
+    }
+
+    /* Centraliza o conteúdo na página impressa */
+    .pagina {
+        max-width: 100%;
+        margin: 0;
+    }
+}
