@@ -148,14 +148,19 @@ document.addEventListener('DOMContentLoaded', function () {
         reconhecimento.maxAlternatives = 1;
 
         reconhecimento.onresult = function (evento) {
-            var texto = evento.results[0][0].transcript.trim();
+            /* Junta todos os resultados da sessão em uma frase única.
+               Isso captura frases completas faladas enquanto o botão está pressionado. */
+            var partes = [];
+            for (var i = 0; i < evento.results.length; i++) {
+                partes.push(evento.results[i][0].transcript.trim());
+            }
+            var texto = partes.join(' ').trim();
+
             if (texto) {
                 adicionarItem(texto);
                 labelStatus.textContent = 'Adicionado: "' + texto + '"';
             }
-            if (gravando) setTimeout(function () {
-                try { reconhecimento.start(); } catch (e) {}
-            }, 150);
+            /* Não reinicia — o usuário controla pressionando o botão */
         };
 
         reconhecimento.onerror = function (evento) {
@@ -183,33 +188,65 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         };
 
+        /* Quando o reconhecimento termina (ao soltar o botão ou por silêncio),
+           NÃO reinicia automaticamente — o texto já foi capturado em onresult */
         reconhecimento.onend = function () {
-            if (gravando) setTimeout(function () {
-                try { reconhecimento.start(); } catch (e) { pararGravacao(); }
-            }, 150);
+            /* Só para o visual; o texto já foi adicionado pelo onresult */
+            if (gravando) pararGravacaoVisual();
         };
 
-        labelStatus.textContent = 'Toque no microfone para falar';
+        labelStatus.textContent = 'Segure o microfone e fale';
     }
 
-    btnMicrofone.addEventListener('click', function () {
-        gravando ? pararGravacao() : comecarGravacao();
+    /* ── Eventos de pressionar e soltar ──
+       Usamos pointer events que funcionam igual para mouse E toque,
+       sem precisar de preventDefault() agressivo.
+       - pointerdown  → começa quando o dedo/mouse pressiona
+       - pointerup    → termina quando solta
+       - pointerleave → cancela se o dedo sair do botão sem soltar  */
+
+    btnMicrofone.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); /* Evita seleção de texto e scroll acidental */
+        btnMicrofone.setPointerCapture(e.pointerId); /* Segura o evento no botão */
+        comecarGravacao();
     });
+
+    btnMicrofone.addEventListener('pointerup',    soltar);
+    btnMicrofone.addEventListener('pointercancel',soltar);
+
+    function soltar() {
+        if (gravando) pararGravacao();
+    }
+
+    /* Primeira vez: pede permissão do microfone via getUserMedia.
+       Depois que a permissão é concedida, as chamadas seguintes
+       iniciam diretamente sem pedir permissão de novo. */
+    var permissaoConcedida = false;
 
     function comecarGravacao() {
         if (!reconhecimento) return;
-        labelStatus.textContent = 'Solicitando permissão...';
+
+        if (permissaoConcedida) {
+            /* Permissão já foi concedida antes — inicia direto */
+            iniciarReconhecimento();
+            return;
+        }
+
+        labelStatus.textContent = 'Aguardando permissão...';
 
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ audio: true })
                 .then(function (fluxo) {
+                    /* Fecha o fluxo de teste — o reconhecimento abre o próprio */
                     fluxo.getTracks().forEach(function (f) { f.stop(); });
+                    permissaoConcedida = true;
                     iniciarReconhecimento();
                 })
                 .catch(function () {
                     labelStatus.textContent = 'Permissão negada. Verifique as configurações.';
                 });
         } else {
+            permissaoConcedida = true;
             iniciarReconhecimento();
         }
     }
@@ -219,17 +256,28 @@ document.addEventListener('DOMContentLoaded', function () {
             reconhecimento.start();
             gravando = true;
             btnMicrofone.classList.add('gravando');
-            labelStatus.textContent = 'Ouvindo… toque para parar';
+            labelStatus.textContent = 'Ouvindo… solte para concluir';
         } catch (e) {
             labelStatus.textContent = 'Tente novamente.';
+            gravando = false;
         }
     }
 
+    /* Para a gravação e processa o resultado */
     function pararGravacao() {
         gravando = false;
+        if (reconhecimento) {
+            /* stop() (não abort()) → processa o áudio gravado e dispara onresult */
+            try { reconhecimento.stop(); } catch (e) {}
+        }
+        pararGravacaoVisual();
+    }
+
+    /* Atualiza apenas o visual do botão, sem interferir no reconhecimento */
+    function pararGravacaoVisual() {
+        gravando = false;
         btnMicrofone.classList.remove('gravando');
-        labelStatus.textContent = 'Toque no microfone para falar';
-        if (reconhecimento) try { reconhecimento.abort(); } catch (e) {}
+        labelStatus.textContent = 'Segure o microfone e fale';
     }
 
 
