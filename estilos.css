@@ -1,21 +1,22 @@
 /*
 =======================================================
-  ESTILOS.CSS — Folha de Estilos da Lista de Compras
+  ESTILOS.CSS — Lista de Compras
 =======================================================
   Organização:
   1.  Reset e base
   2.  Layout da página
-  3.  Caixas (cartões)
+  3.  Caixas
   4.  Entrada por texto
   5.  Separador
   6.  Entrada por voz
   7.  Lista de itens
   8.  Total
   9.  Botão de impressão
-  10. Modais
-  11. Animação de gravação
-  12. Responsividade (tablet e desktop)
-  13. Estilos de impressão
+  10. Teclado do site   ← novo
+  11. Modais
+  12. Animação de gravação
+  13. Responsividade
+  14. Impressão
 =======================================================
 */
 
@@ -28,31 +29,23 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    -webkit-tap-highlight-color: transparent;
+    -webkit-tap-highlight-color: transparent; /* Remove destaque azul ao tocar */
 }
 
-html {
-    font-size: 16px;
-
-    /* A altura do html se adapta à viewport visível (excluindo o teclado).
-       100% aqui significa "100% da altura da janela do navegador" */
+html, body {
     height: 100%;
+    font-family: Arial, sans-serif;
 }
 
 body {
-    font-family: Arial, sans-serif;
     background-color: #f0f2f5;
+
+    /* Espaço inferior reservado para o teclado do site quando estiver visível.
+       O JavaScript ajusta esse valor dinamicamente conforme o teclado abre/fecha. */
     padding: 16px;
+    padding-bottom: calc(16px + var(--altura-teclado, 0px));
 
-    /* min-height: 100vh como fallback para navegadores antigos */
-    min-height: 100vh;
-
-    /* 100dvh = dynamic viewport height: unidade moderna que exclui
-       automaticamente o espaço do teclado virtual quando ele está aberto.
-       Suportado a partir do iOS 15.4 e Android Chrome 108. */
-    min-height: 100dvh;
-
-    /* Rolagem suave quando o JavaScript usa scrollIntoView() */
+    transition: padding-bottom 0.25s ease;
     scroll-behavior: smooth;
 }
 
@@ -76,7 +69,7 @@ h1 {
 
 
 /* ===================================================
-   3. CAIXAS (CARTOES)
+   3. CAIXAS
 =================================================== */
 
 .caixa {
@@ -98,27 +91,28 @@ h1 {
     margin-bottom: 16px;
 }
 
+/* O campo tem readonly para não abrir o teclado do sistema.
+   O teclado do site é exibido pelo JavaScript ao tocar no campo. */
 .entrada-texto input {
     flex: 1;
     min-width: 0;
     padding: 12px 14px;
     border: 1.5px solid #ddd;
     border-radius: 10px;
-    font-size: clamp(15px, 4vw, 17px);
+    font-size: 16px;
     color: #3a3a3a;
     background: #fafafa;
     -webkit-appearance: none;
     appearance: none;
-
-    /* font-size mínimo de 16px evita que o iOS faça zoom automático
-       ao focar no campo, o que deslocava a tela de forma indesejada */
-    font-size: max(16px, 1em);
+    cursor: pointer; /* Cursor de mão para indicar que é clicável */
+    caret-color: #4285f4; /* Cursor de digitação azul */
 }
 
-.entrada-texto input:focus {
-    outline: none;
+/* Destaque azul quando o teclado do site está ativo */
+.entrada-texto input.campo-ativo {
     border-color: #4285f4;
     background: white;
+    outline: none;
 }
 
 .btn-adicionar {
@@ -214,9 +208,7 @@ h1 {
    7. LISTA DE ITENS
 =================================================== */
 
-ul {
-    list-style: none;
-}
+ul { list-style: none; }
 
 .item {
     padding: 14px 8px;
@@ -226,9 +218,7 @@ ul {
     gap: 6px;
 }
 
-.item:last-child {
-    border-bottom: none;
-}
+.item:last-child { border-bottom: none; }
 
 .item-nome {
     flex: 1;
@@ -260,9 +250,7 @@ ul {
     flex-shrink: 0;
 }
 
-.btn-editar,
-.btn-preco,
-.btn-excluir {
+.btn-editar, .btn-preco, .btn-excluir {
     border: none;
     background: none;
     cursor: pointer;
@@ -305,7 +293,7 @@ ul {
 
 
 /* ===================================================
-   9. BOTAO DE IMPRESSAO
+   9. BOTÃO DE IMPRESSÃO
 =================================================== */
 
 .area-impressao {
@@ -353,36 +341,232 @@ ul {
 
 
 /* ===================================================
-   10. MODAIS
-   O modal usa position:fixed e ocupa toda a tela.
-   No celular ele sobe do fundo (align-items: flex-end).
+   10. TECLADO DO SITE
 
-   A chave para o teclado não cobrir o modal é a variável
-   CSS --altura-visivel que o JavaScript atualiza em tempo real
-   usando a Visual Viewport API. Quando o teclado abre, essa
-   variável passa a conter só a altura acima do teclado,
-   e o modal se reposiciona para caber nesse espaço.
+   O teclado fica fixo na parte INFERIOR da tela,
+   sempre visível acima de qualquer outro conteúdo.
+   Começa oculto (transform: translateY(100%)) e
+   desliza para cima quando o JavaScript o ativa.
+
+   Estrutura:
+   ┌─────────────────────────┐
+   │  visor (mostra o texto) │
+   ├─────────────────────────┤
+   │  face de letras         │
+   │  — ou —                 │
+   │  face de números        │
+   └─────────────────────────┘
+=================================================== */
+
+.teclado {
+    position: fixed;          /* Fixo na tela, não rola com a página  */
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 500;             /* Acima de tudo, inclusive dos modais  */
+
+    background: #d1d5db;      /* Cinza claro — cor clássica de teclado */
+    border-top: 1px solid #b0b4bb;
+    padding: 6px 4px 8px;
+
+    /* Começa fora da tela (abaixo) */
+    transform: translateY(100%);
+
+    /* Animação suave de deslizar para cima */
+    transition: transform 0.25s ease;
+
+    /* Sombra para dar profundidade */
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+
+    /* Padding extra para o "recuo" inferior do iPhone (home bar) */
+    padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+
+    /* Impede que o teclado role junto com a página */
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Estado visível — JavaScript adiciona esta classe */
+.teclado-visivel {
+    transform: translateY(0);
+}
+
+/* ── Visor do teclado ── */
+.teclado-visor {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 10px;
+    margin: 0 4px 6px;
+    padding: 8px 12px;
+    min-height: 42px;
+    border: 1.5px solid #c0c4cc;
+    gap: 8px;
+}
+
+/* Texto digitado exibido no visor */
+.teclado-visor-texto {
+    flex: 1;
+    font-size: 16px;
+    color: #2c2c2c;
+    word-break: break-word;
+    min-height: 22px;
+
+    /* Cursor piscante simulado com uma borda direita */
+    border-right: 2px solid #4285f4;
+    padding-right: 2px;
+    animation: piscarCursor 1s step-end infinite;
+}
+
+@keyframes piscarCursor {
+    0%, 100% { border-color: #4285f4; }
+    50%       { border-color: transparent; }
+}
+
+/* Botão X para fechar o teclado */
+.teclado-fechar {
+    background: #e5e7eb;
+    border: none;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+    color: #555;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+}
+
+.teclado-fechar:active { background: #d1d5db; }
+
+/* ── Faces do teclado (letras / números) ── */
+.teclado-face {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* Oculta a face que não está ativa */
+.teclado-face-oculta {
+    display: none;
+}
+
+/* ── Linhas de teclas ── */
+.teclado-linha {
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap; /* Quebra linha em telas muito estreitas */
+}
+
+/* ── Tecla padrão ── */
+.tecla {
+    /* Tamanho fluido: cresce/encolhe conforme a largura da tela */
+    flex: 1;
+    min-width: 28px;
+    max-width: 42px;
+    height: 42px;
+
+    background: white;
+    border: none;
+    border-radius: 8px;
+    font-size: clamp(13px, 3.5vw, 16px);
+    color: #1c1c1e;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    /* Sombra inferior — efeito de tecla física */
+    box-shadow: 0 1px 0 rgba(0,0,0,0.35);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Feedback tátil: escurece ao pressionar */
+    transition: background 0.08s, transform 0.08s;
+
+    /* Impede seleção de texto nas teclas */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Efeito visual ao pressionar qualquer tecla */
+.tecla:active {
+    background: #c8ccd4;
+    transform: scale(0.93);
+    box-shadow: none;
+}
+
+/* ── Teclas especiais (cor diferente) ── */
+
+/* Maiúscula / Shift */
+.tecla-maiuscula {
+    background: #adb5bd;
+    font-size: 18px;
+    max-width: 48px;
+}
+
+/* Estado ativo do Shift (letras maiúsculas ligadas) */
+.tecla-maiuscula.ativo {
+    background: #4285f4;
+    color: white;
+}
+
+/* Apagar (backspace) */
+.tecla-apagar {
+    background: #adb5bd;
+    font-size: 18px;
+    max-width: 52px;
+}
+
+/* Alternador ABC / 123 */
+.tecla-alternador {
+    background: #adb5bd;
+    font-size: 13px;
+    max-width: 54px;
+    font-weight: bold;
+}
+
+/* Barra de espaço — ocupa o máximo de espaço */
+.tecla-espaco {
+    flex: 4;           /* 4x maior que as teclas normais */
+    max-width: 999px;  /* Sem limite para crescer */
+    font-size: 13px;
+    color: #555;
+}
+
+/* Botão OK / Confirmar — verde e destacado */
+.tecla-confirmar {
+    background: #4285f4;
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    max-width: 72px;
+    flex: 2;
+}
+
+.tecla-confirmar:active {
+    background: #2c6fd4;
+}
+
+
+/* ===================================================
+   11. MODAIS
 =================================================== */
 
 .modal {
     display: none;
     position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-
-    /* Usa a variável dinâmica definida pelo JS.
-       Fallback: 100dvh para navegadores sem suporte à Visual Viewport API */
-    height: var(--altura-visivel, 100dvh);
-
+    inset: 0;
     background-color: rgba(0,0,0,0.45);
-    z-index: 200;
-    align-items: flex-end;  /* Modal ancorado no fundo do espaço visível */
+    z-index: 300;          /* Abaixo do teclado (500) mas acima da página */
+    align-items: flex-end;
     justify-content: center;
     padding: 16px;
-
-    /* Transição suave de altura quando o teclado abre ou fecha */
-    transition: height 0.15s ease;
 }
 
 .modal-conteudo {
@@ -408,12 +592,10 @@ ul {
     margin-bottom: 16px;
     border: 1.5px solid #ddd;
     border-radius: 10px;
+    font-size: 16px;        /* 16px evita zoom automático no iOS */
     color: #3a3a3a;
     -webkit-appearance: none;
     appearance: none;
-
-    /* font-size mínimo de 16px evita zoom automático no iOS ao focar */
-    font-size: max(16px, 1em);
 }
 
 .modal input:focus {
@@ -443,76 +625,66 @@ ul {
 .btn-cancelar  { background-color: #f1f1f1; color: #3a3a3a; }
 .btn-cancelar:active { background-color: #e0e0e0; }
 
-
-/* ===================================================
-   11. ANIMACAO DE GRAVACAO
-=================================================== */
-
-/* Classe adicionada pelo JS enquanto o microfone está ativo.
-   O botão pulsa em vermelho para deixar claro que está gravando. */
-.gravando {
-    animation: piscar 1.4s infinite;
+/* Em telas maiores (tablet/desktop), modal centralizado */
+@media (min-width: 480px) {
+    .modal { align-items: center; }
 }
 
-/* Anel vermelho pulsante ao redor do botão quando está gravando.
-   Usando box-shadow para não alterar o tamanho real do botão
-   e não atrapalhar o layout dos elementos ao redor. */
-.gravando .icone-microfone {
-    box-shadow: 0 0 0 4px rgba(219, 68, 55, 0.6);
+
+/* ===================================================
+   12. ANIMAÇÃO DE GRAVAÇÃO
+=================================================== */
+
+.gravando {
+    animation: piscar 1.2s infinite;
 }
 
 @keyframes piscar {
-    0%   {
-        filter: brightness(0.9) saturate(1.5);
-        transform: scale(1);
-        box-shadow: 0 0 0 0px rgba(219, 68, 55, 0.5);
-    }
-    50%  {
-        filter: brightness(1.1) saturate(2) hue-rotate(-20deg);
-        transform: scale(1.08);
-        box-shadow: 0 0 0 8px rgba(219, 68, 55, 0);
-    }
-    100% {
-        filter: brightness(0.9) saturate(1.5);
-        transform: scale(1);
-        box-shadow: 0 0 0 0px rgba(219, 68, 55, 0.5);
-    }
+    0%   { filter: brightness(0.85); transform: scale(1);   }
+    50%  { filter: brightness(1.15); transform: scale(1.1); }
+    100% { filter: brightness(0.85); transform: scale(1);   }
 }
 
 
 /* ===================================================
-   12. RESPONSIVIDADE
+   13. RESPONSIVIDADE
 =================================================== */
 
-/* Tablet: a partir de 480px */
 @media (min-width: 480px) {
-    body  { padding: 24px 20px; }
+    body   { padding: 24px 20px; padding-bottom: calc(24px + var(--altura-teclado, 0px)); }
     .caixa { padding: 24px; }
 
-    /* Em telas maiores não há teclado virtual, o modal fica centralizado */
-    .modal {
-        align-items: center;
-        height: 100dvh; /* Volta ao tamanho normal, sem variável dinâmica */
-    }
+    /* Em tablet/desktop não há teclado virtual, aumentamos as teclas */
+    .tecla { height: 46px; font-size: 15px; }
 }
 
-/* Desktop: a partir de 768px */
 @media (min-width: 768px) {
-    body { padding: 40px 24px; }
+    body { padding: 40px 24px; padding-bottom: calc(40px + var(--altura-teclado, 0px)); }
     h1   { margin-bottom: 24px; }
+
+    /* Em telas largas o teclado fica centralizado com largura máxima */
+    .teclado {
+        max-width: 600px;
+        left: 50%;
+        transform: translateX(-50%) translateY(100%);
+        border-radius: 12px 12px 0 0;
+    }
+
+    .teclado.teclado-visivel {
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 
 /* ===================================================
-   13. ESTILOS DE IMPRESSAO
+   14. IMPRESSÃO
 =================================================== */
 
 @media print {
 
     body {
         background-color: white;
-        padding: 0;
-        font-size: 12pt;
+        padding: 0 !important;
     }
 
     .caixa {
@@ -523,21 +695,12 @@ ul {
         padding: 12pt;
     }
 
-    /* Oculta tudo que não faz sentido no papel */
-    .entrada-texto,
-    .separador,
-    .entrada-voz,
-    .acoes,
-    .area-impressao,
-    .modal {
+    .entrada-texto, .separador, .entrada-voz,
+    .acoes, .area-impressao, .modal, .teclado {
         display: none !important;
     }
 
-    h1 {
-        font-size: 18pt;
-        margin-bottom: 12pt;
-        color: black;
-    }
+    h1 { font-size: 18pt; margin-bottom: 12pt; color: black; }
 
     .item {
         padding: 8pt 4pt;
@@ -545,20 +708,14 @@ ul {
         page-break-inside: avoid;
     }
 
-    .item-nome {
-        font-size: 12pt;
-        color: black;
-    }
+    .item-nome { font-size: 12pt; color: black; }
 
     .item.marcado .item-nome {
         text-decoration: line-through;
         color: #888;
     }
 
-    .item-preco {
-        font-size: 11pt;
-        color: black;
-    }
+    .item-preco { font-size: 11pt; color: black; }
 
     .total {
         font-size: 14pt;
@@ -567,8 +724,5 @@ ul {
         padding-top: 8pt;
     }
 
-    .pagina {
-        max-width: 100%;
-        margin: 0;
-    }
+    .pagina { max-width: 100%; margin: 0; }
 }
