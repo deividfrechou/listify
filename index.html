@@ -11,21 +11,20 @@
     <meta charset="UTF-8">
 
     <!-- Configuração de visualização para dispositivos móveis:
-         - width=device-width: largura da página igual à largura do dispositivo
-         - initial-scale=1.0: zoom inicial de 100%
-         - maximum-scale=1.0: impede zoom acidental em campos de texto no iOS -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+         - width=device-width    : largura da página igual à largura do dispositivo
+         - initial-scale=1.0    : zoom inicial de 100%
+         - maximum-scale=1.0    : impede zoom acidental ao tocar em campos de texto
+         - viewport-fit=cover   : permite que o CSS leia a área segura da tela (notch iOS)
+         - interactive-widget=resizes-content : no Android/Chrome a página ENCOLHE
+           quando o teclado abre, compartilhando a tela com ele -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <!-- Cor da barra do navegador em dispositivos Android -->
     <meta name="theme-color" content="#4285f4">
 
-    <!-- Permite salvar a página na tela inicial como aplicativo (Android) -->
+    <!-- Permite salvar na tela inicial como aplicativo (Android e iOS) -->
     <meta name="mobile-web-app-capable" content="yes">
-
-    <!-- Permite salvar a página na tela inicial como aplicativo (iOS) -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-
-    <!-- Estilo da barra de status do iOS ao abrir como app -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
     <!-- Título exibido na aba do navegador -->
@@ -46,14 +45,16 @@
         <h1>Lista de Compras</h1>
 
         <!-- Caixa de entrada: agrupa as formas de adicionar itens -->
-        <div class="caixa">
+        <div class="caixa" id="caixaEntrada">
 
             <!-- Seção de entrada por texto: campo + botão Adicionar -->
             <div class="entrada-texto">
 
                 <!-- Campo onde o usuário digita o item.
-                     - autocomplete, autocorrect e spellcheck desativados
-                       para evitar sugestões indesejadas no celular -->
+                     - autocomplete/autocorrect/spellcheck desativados para evitar
+                       sugestões indesejadas no celular
+                     - enterkeyhint="done": muda o botão Enter do teclado virtual
+                       para "Concluído", deixando claro que o item será adicionado -->
                 <input
                     type="text"
                     id="campoTexto"
@@ -61,6 +62,7 @@
                     autocomplete="off"
                     autocorrect="off"
                     spellcheck="false"
+                    enterkeyhint="done"
                 >
 
                 <!-- Botão que aciona a adição do item digitado -->
@@ -74,19 +76,17 @@
             <!-- Seção de entrada por voz: botão do microfone + status -->
             <div class="entrada-voz">
 
-                <!-- Botão do microfone — pressione e segure para falar.
-                     Usa a imagem microphone.png como ícone -->
-                <button id="btnMicrofone" class="btn-microfone" title="Pressione e segure para falar">
+                <!-- Botão do microfone — pressione e segure para falar -->
+                <button id="btnMicrofone" class="btn-microfone" title="Toque para falar">
                     <img src="microphone.png" alt="Microfone" class="icone-microfone">
                 </button>
 
-                <!-- Texto que informa o estado atual do microfone.
-                     Atualizado dinamicamente pelo JavaScript -->
-                <div id="status" class="status">Pressione e segure para falar</div>
+                <!-- Texto que informa o estado atual do microfone -->
+                <div id="status" class="status">Toque no microfone para falar</div>
 
             </div><!-- fim .entrada-voz -->
 
-        </div><!-- fim .caixa (entrada) -->
+        </div><!-- fim #caixaEntrada -->
 
 
         <!-- Caixa da lista: exibe os itens adicionados e o total -->
@@ -101,18 +101,15 @@
         </div><!-- fim .caixa (lista) -->
 
 
-        <!-- Botão de impressão da lista.
-             Ao clicar, o JavaScript chama window.print() para abrir o diálogo de impressão.
-             O CSS de impressão (no estilos.css) controla o que aparece na folha impressa -->
+        <!-- Botão de impressão — aciona window.print() via JavaScript -->
         <div class="area-impressao">
             <button class="btn-imprimir" id="btnImprimir">
-                <!-- Ícone de impressora desenhado em SVG para melhor qualidade -->
                 <svg viewBox="0 0 24 24" class="icone-impressora">
                     <path d="M18,3H6V7H18M19,12A1,1 0 0,1 18,11A1,1 0 0,1 19,12M16,19H8V15H16M19,8H5A3,3 0 0,0 2,11V17H6V21H18V17H22V11A3,3 0 0,0 19,8Z" />
                 </svg>
                 Imprimir Lista
             </button>
-        </div><!-- fim .area-impressao -->
+        </div>
 
     </div><!-- fim .pagina -->
 
@@ -127,30 +124,30 @@
     <div id="modalEditar" class="modal">
         <div class="modal-conteudo">
             <div class="modal-titulo">Editar Item</div>
-            <input type="text" id="campoEditar" autocomplete="off">
+            <input type="text" id="campoEditar" autocomplete="off" enterkeyhint="done">
             <div class="modal-botoes">
                 <button class="btn-modal btn-cancelar" id="cancelarEditar">Cancelar</button>
                 <button class="btn-modal btn-confirmar" id="confirmarEditar">Confirmar</button>
             </div>
         </div>
-    </div><!-- fim #modalEditar -->
+    </div>
 
     <!-- Modal para editar o preço de um item -->
     <div id="modalPreco" class="modal">
         <div class="modal-conteudo">
             <div class="modal-titulo">Editar Preço</div>
-            <!-- inputmode="decimal" abre teclado numérico com vírgula no celular -->
-            <input type="number" step="0.01" min="0" id="campoPreco" inputmode="decimal">
+            <!-- inputmode="decimal": abre teclado numérico com vírgula/ponto no celular -->
+            <input type="number" step="0.01" min="0" id="campoPreco" inputmode="decimal" enterkeyhint="done">
             <div class="modal-botoes">
                 <button class="btn-modal btn-cancelar" id="cancelarPreco">Cancelar</button>
                 <button class="btn-modal btn-confirmar" id="confirmarPreco">Confirmar</button>
             </div>
         </div>
-    </div><!-- fim #modalPreco -->
+    </div>
 
 
-    <!-- JavaScript importado no final do body para garantir que o HTML
-         já esteja carregado antes de o script ser executado -->
+    <!-- JavaScript importado no final do body: garante que o HTML já existe
+         antes de o script tentar acessar os elementos -->
     <script src="aplicativo.js"></script>
 
 </body>

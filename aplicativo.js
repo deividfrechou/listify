@@ -7,20 +7,21 @@
   2.  Referências aos elementos HTML
   3.  Variáveis de estado
   4.  Inicialização
-  5.  Entrada por texto
-  6.  Entrada por voz
-  7.  Gerenciamento dos itens (adicionar, renderizar, marcar, excluir)
-  8.  Modais (editar nome e editar preço)
-  9.  Botão de impressão
-  10. Total e armazenamento local
+  5.  Teclado virtual — Visual Viewport API
+  6.  Entrada por texto
+  7.  Entrada por voz  ← corrigido para iOS e Android
+  8.  Gerenciamento dos itens
+  9.  Modais
+  10. Botão de impressão
+  11. Total e armazenamento local
 =======================================================
 */
 
 
 /* ===================================================
    1. AGUARDAR CARREGAMENTO DA PAGINA
-   O código só roda quando todos os elementos HTML
-   já foram criados pelo navegador.
+   Garante que todos os elementos HTML existam antes
+   de o JavaScript tentar acessá-los.
 =================================================== */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -30,247 +31,431 @@ document.addEventListener('DOMContentLoaded', function () {
        2. REFERENCIAS AOS ELEMENTOS HTML
     =================================================== */
 
-    var btnMicrofone  = document.getElementById('btnMicrofone');  /* Botão do microfone */
-    var btnAdicionar  = document.getElementById('btnAdicionar');  /* Botão "Adicionar" */
-    var campoTexto    = document.getElementById('campoTexto');    /* Campo de digitação */
-    var labelStatus   = document.getElementById('status');        /* Texto de status do microfone */
-    var listaItens    = document.getElementById('lista');         /* <ul> da lista de itens */
-    var labelTotal    = document.getElementById('total');         /* Texto com o total */
-    var modalEditar   = document.getElementById('modalEditar');   /* Modal de edição de nome */
-    var modalPreco    = document.getElementById('modalPreco');    /* Modal de edição de preço */
-    var campoEditar   = document.getElementById('campoEditar');   /* Campo do modal de nome */
-    var campoPreco    = document.getElementById('campoPreco');    /* Campo do modal de preço */
-    var btnImprimir   = document.getElementById('btnImprimir');   /* Botão de impressão */
+    var btnMicrofone = document.getElementById('btnMicrofone');  /* Botão do microfone       */
+    var btnAdicionar = document.getElementById('btnAdicionar');  /* Botão "Adicionar"        */
+    var campoTexto   = document.getElementById('campoTexto');    /* Campo de digitação       */
+    var labelStatus  = document.getElementById('status');        /* Texto de status do mic   */
+    var listaItens   = document.getElementById('lista');         /* <ul> da lista de itens   */
+    var labelTotal   = document.getElementById('total');         /* Texto com o total        */
+    var modalEditar  = document.getElementById('modalEditar');   /* Modal de edição de nome  */
+    var modalPreco   = document.getElementById('modalPreco');    /* Modal de edição de preço */
+    var campoEditar  = document.getElementById('campoEditar');   /* Campo do modal de nome   */
+    var campoPreco   = document.getElementById('campoPreco');    /* Campo do modal de preço  */
+    var btnImprimir  = document.getElementById('btnImprimir');   /* Botão de impressão       */
 
 
     /* ===================================================
        3. VARIAVEIS DE ESTADO
     =================================================== */
 
-    var reconhecimento;     /* Objeto de reconhecimento de voz (configurado em iniciarVoz) */
-    var gravando = false;   /* true quando o microfone está ativo */
+    /* Objeto de reconhecimento de voz — configurado em iniciarVoz() */
+    var reconhecimento = null;
 
-    /* Array principal com todos os itens da lista.
-       Cada item é: { nome: string, preco: number, marcado: boolean } */
+    /* true quando o microfone está escutando ativamente */
+    var gravando = false;
+
+    /* Array com todos os itens: [ { nome, preco, marcado }, ... ] */
     var itens = [];
 
-    /* Índice do item sendo editado nos modais. -1 = nenhum */
+    /* Índice do item sendo editado nos modais (-1 = nenhum) */
     var indiceAtual = -1;
+
+    /* Altura da janela sem teclado — usada no fallback de viewport */
+    var alturaOriginalViewport = window.innerHeight;
 
 
     /* ===================================================
        4. INICIALIZACAO
     =================================================== */
 
-    carregarItens(); /* Recupera itens salvos no localStorage */
-    iniciarVoz();    /* Configura o reconhecimento de voz */
+    carregarItens();
+    iniciarVoz();
+    iniciarControleDoTeclado();
 
 
     /* ===================================================
-       5. ENTRADA POR TEXTO
+       5. TECLADO VIRTUAL — VISUAL VIEWPORT API
+
+       Quando o teclado virtual abre no celular, ele "sobrepõe"
+       a página por padrão. A solução é detectar em tempo real
+       a altura da área visível (acima do teclado) e usar esse
+       valor para reposicionar o modal através de uma variável CSS.
+    =================================================== */
+
+    function iniciarControleDoTeclado() {
+
+        if (window.visualViewport) {
+            /* Método moderno: Visual Viewport API.
+               Dispara sempre que a viewport muda (teclado, zoom, rotação). */
+            window.visualViewport.addEventListener('resize', aoMudarViewport);
+            window.visualViewport.addEventListener('scroll', aoMudarViewport);
+        } else {
+            /* Fallback para navegadores sem a API moderna */
+            window.addEventListener('resize', aoMudarViewportFallback);
+        }
+    }
+
+    /* Atualiza a variável CSS --altura-visivel com a altura real disponível */
+    function aoMudarViewport() {
+        var alturaVisivel = window.visualViewport.height;
+
+        document.documentElement.style.setProperty(
+            '--altura-visivel',
+            alturaVisivel + 'px'
+        );
+
+        /* Se um modal estiver aberto, rola o campo para ficar visível */
+        var campoFocado = document.querySelector('.modal[style*="flex"] input:focus');
+        if (campoFocado) {
+            campoFocado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        /* Se o campo principal estiver ativo, sobe para ele */
+        if (document.activeElement === campoTexto) {
+            campoTexto.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    /* Versão fallback — detecta abertura do teclado pela queda de altura */
+    function aoMudarViewportFallback() {
+        var alturaAtual = window.innerHeight;
+
+        if (alturaOriginalViewport - alturaAtual > 150) {
+            /* Teclado provavelmente aberto */
+            document.documentElement.style.setProperty(
+                '--altura-visivel', alturaAtual + 'px'
+            );
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                setTimeout(function () {
+                    document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
+            }
+        } else {
+            /* Teclado provavelmente fechado */
+            document.documentElement.style.removeProperty('--altura-visivel');
+        }
+    }
+
+
+    /* ===================================================
+       6. ENTRADA POR TEXTO
     =================================================== */
 
     /* Clique no botão "Adicionar" */
     btnAdicionar.addEventListener('click', function () {
-        var nome = campoTexto.value.trim(); /* Remove espaços nas pontas */
-
+        var nome = campoTexto.value.trim();
         if (nome) {
             adicionarItem(nome);
-            campoTexto.value = '';     /* Limpa o campo */
-            campoTexto.focus();        /* Mantém o foco para digitar o próximo */
+            campoTexto.value = '';
+            campoTexto.focus();
         }
     });
 
-    /* Tecla Enter no campo de texto também adiciona o item */
+    /* Enter no campo também adiciona */
     campoTexto.addEventListener('keydown', function (evento) {
-        if (evento.key === 'Enter') {
-            btnAdicionar.click();
+        if (evento.key === 'Enter') btnAdicionar.click();
+    });
+
+    /* Rola para o campo após o teclado subir */
+    campoTexto.addEventListener('focus', function () {
+        setTimeout(function () {
+            campoTexto.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 400);
+    });
+
+    /* Ao sair do campo, restaura a altura se nenhum modal estiver aberto */
+    campoTexto.addEventListener('blur', function () {
+        if (!document.querySelector('.modal[style*="flex"]')) {
+            document.documentElement.style.removeProperty('--altura-visivel');
         }
     });
 
 
     /* ===================================================
-       6. ENTRADA POR VOZ
+       7. ENTRADA POR VOZ
+
+       Por que o microfone falha no celular?
+       ─────────────────────────────────────
+       • iOS Safari/Chrome: NÃO suporta continuous:true.
+         A sessão para automaticamente após cada silêncio.
+
+       • Android Chrome: suporta melhor, mas exige HTTPS
+         e permissão concedida dentro de um gesto do usuário.
+
+       • "Pressione e segure": causava conflitos com gestos
+         do sistema (scroll, seleção de texto, etc.).
+
+       Solução adotada
+       ───────────────
+       • Botão de toque simples: um toque LIGA, outro DESLIGA.
+       • continuous: false — compatível com iOS e Android.
+       • Ao terminar cada fala, reiniciamos manualmente se o
+         usuário ainda não desligou.
+       • getUserMedia() pede permissão explicitamente antes de
+         iniciar, necessário no iOS Safari.
+       • Tratamento detalhado de cada tipo de erro.
     =================================================== */
 
     /*
      * Função: iniciarVoz
-     * Verifica suporte do navegador e configura o reconhecedor de voz.
+     * Verifica suporte da API e configura o reconhecedor.
+     * Chamada uma vez ao carregar a página.
      */
     function iniciarVoz() {
-        if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
 
-            /* Usa a versão compatível com o navegador atual */
-            var APIDeVoz = window.SpeechRecognition || window.webkitSpeechRecognition;
-            reconhecimento = new APIDeVoz();
+        /* Verifica compatibilidade — Chrome usa prefixo "webkit" */
+        var temAPI = ('SpeechRecognition' in window) ||
+                     ('webkitSpeechRecognition' in window);
 
-            reconhecimento.lang = 'pt-BR';          /* Idioma: Português do Brasil */
-            reconhecimento.continuous = true;        /* Grava vários trechos sem reiniciar */
-            reconhecimento.interimResults = false;   /* Só retorna resultado final da fala */
-
-            /* Disparado quando uma fala é reconhecida */
-            reconhecimento.onresult = function (evento) {
-                var textoReconhecido = evento.results[evento.results.length - 1][0].transcript.trim();
-
-                if (textoReconhecido) {
-                    adicionarItem(textoReconhecido);
-                    labelStatus.textContent = 'Adicionado: "' + textoReconhecido + '"';
-                }
-            };
-
-            /* Disparado quando ocorre um erro no microfone */
-            reconhecimento.onerror = function () {
-                labelStatus.textContent = 'Erro no microfone. Tente novamente.';
-                pararGravacao();
-            };
-
-            /* Disparado quando o reconhecimento para automaticamente.
-               Reinicia se ainda estiver no modo gravação. */
-            reconhecimento.onend = function () {
-                if (gravando) {
-                    reconhecimento.start();
-                }
-            };
-
-        } else {
-            /* Navegador sem suporte a reconhecimento de voz */
-            labelStatus.textContent = 'Seu navegador não suporta voz.';
+        if (!temAPI) {
+            labelStatus.textContent = 'Voz não suportada neste navegador.';
             btnMicrofone.disabled = true;
             btnMicrofone.style.opacity = '0.4';
+            return;
+        }
+
+        /* Cria o objeto usando a versão disponível no navegador */
+        var APIDeVoz = window.SpeechRecognition || window.webkitSpeechRecognition;
+        reconhecimento = new APIDeVoz();
+
+        reconhecimento.lang           = 'pt-BR'; /* Português do Brasil          */
+        reconhecimento.continuous     = false;   /* false = compatível com iOS   */
+        reconhecimento.interimResults = false;   /* Só retorna o resultado final */
+        reconhecimento.maxAlternatives = 1;      /* Apenas a melhor interpretação */
+
+        /* Disparado quando o navegador reconhece o que foi dito */
+        reconhecimento.onresult = function (evento) {
+            var textoReconhecido = evento.results[0][0].transcript.trim();
+
+            if (textoReconhecido) {
+                adicionarItem(textoReconhecido);
+                labelStatus.textContent = 'Adicionado: "' + textoReconhecido + '"';
+            }
+
+            /* Como continuous:false para após cada fala, reiniciamos
+               manualmente enquanto o usuário não desligar o microfone */
+            if (gravando) {
+                setTimeout(function () {
+                    try { reconhecimento.start(); } catch (e) {}
+                }, 150);
+            }
+        };
+
+        /* Disparado ao ocorrer qualquer erro — cada tipo tem causa diferente */
+        reconhecimento.onerror = function (evento) {
+
+            switch (evento.error) {
+
+                case 'not-allowed':
+                    /* Usuário negou permissão, ou página sem HTTPS */
+                    labelStatus.textContent = 'Permissão negada. Verifique as configurações.';
+                    pararGravacao();
+                    break;
+
+                case 'no-speech':
+                    /* Silêncio por tempo demais — não é erro grave, reinicia */
+                    labelStatus.textContent = 'Nada ouvido. Fale mais perto do microfone.';
+                    if (gravando) {
+                        setTimeout(function () {
+                            try { reconhecimento.start(); } catch (e) {}
+                        }, 300);
+                    }
+                    break;
+
+                case 'audio-capture':
+                    /* Microfone não encontrado ou ocupado por outro app */
+                    labelStatus.textContent = 'Microfone indisponível ou ocupado.';
+                    pararGravacao();
+                    break;
+
+                case 'network':
+                    /* Reconhecimento de voz precisa de internet (serviço na nuvem) */
+                    labelStatus.textContent = 'Sem internet. Reconhecimento de voz requer conexão.';
+                    pararGravacao();
+                    break;
+
+                case 'aborted':
+                    /* Gravação cancelada manualmente — mensagem neutra */
+                    labelStatus.textContent = 'Toque no microfone para falar';
+                    break;
+
+                default:
+                    labelStatus.textContent = 'Erro no microfone. Tente novamente.';
+                    pararGravacao();
+            }
+        };
+
+        /* Disparado quando o reconhecimento termina naturalmente.
+           Com continuous:false isso ocorre após cada fala.
+           Reinicia se o usuário ainda não desligou. */
+        reconhecimento.onend = function () {
+            if (gravando) {
+                setTimeout(function () {
+                    try {
+                        reconhecimento.start();
+                    } catch (erroReinicio) {
+                        /* Se não conseguir reiniciar, para graciosamente */
+                        pararGravacao();
+                    }
+                }, 150);
+            }
+        };
+
+        /* Avisa que o microfone está pronto */
+        labelStatus.textContent = 'Toque no microfone para falar';
+    }
+
+
+    /* --- Evento do botão do microfone ---
+
+       Usamos 'click' (não mousedown/touchstart) porque:
+       • click já unifica cliques de mouse E toques na tela
+       • Evita disparos duplos em celular
+       • Funciona dentro de um "gesto do usuário" exigido
+         pelo iOS Safari para pedir permissão do microfone  */
+    btnMicrofone.addEventListener('click', alternarGravacao);
+
+    /*
+     * Função: alternarGravacao
+     * Liga se estiver desligado, desliga se estiver ligado.
+     */
+    function alternarGravacao() {
+        if (gravando) {
+            pararGravacao();
+        } else {
+            comecarGravacao();
         }
     }
 
-    /* Inicia gravação ao pressionar o botão (mouse) */
-    btnMicrofone.addEventListener('mousedown', comecarGravacao);
-
-    /* Inicia gravação ao tocar o botão (celular/tablet).
-       passive: false permite chamar preventDefault() para evitar zoom duplo no iOS */
-    btnMicrofone.addEventListener('touchstart', function (evento) {
-        evento.preventDefault();
-        comecarGravacao();
-    }, { passive: false });
-
-    /* Para a gravação ao soltar o mouse */
-    btnMicrofone.addEventListener('mouseup', pararGravacao);
-
-    /* Para a gravação se o cursor sair do botão sem soltar */
-    btnMicrofone.addEventListener('mouseleave', pararGravacao);
-
-    /* Para a gravação ao levantar o dedo da tela */
-    btnMicrofone.addEventListener('touchend', pararGravacao);
-
-    /* Para a gravação se o toque for cancelado (ex: ligação recebida) */
-    btnMicrofone.addEventListener('touchcancel', pararGravacao);
-
     /*
      * Função: comecarGravacao
-     * Ativa o microfone e aplica a animação visual.
+     * Pede permissão do microfone explicitamente via getUserMedia,
+     * depois inicia o reconhecimento de voz.
+     *
+     * Por que getUserMedia antes de iniciar?
+     * No iOS Safari, a permissão do microfone SÓ pode ser pedida
+     * dentro de um evento disparado pelo usuário (clique, toque).
+     * Pedir permissão via getUserMedia garante que o navegador
+     * mostre o diálogo de permissão corretamente.
      */
     function comecarGravacao() {
-        if (reconhecimento) {
-            try { reconhecimento.start(); } catch (erro) {}
-            /* try/catch evita erro se o reconhecimento já estiver ativo */
+        if (!reconhecimento) return;
 
+        labelStatus.textContent = 'Solicitando permissão...';
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(function (fluxo) {
+                    /* Permissão concedida.
+                       Paramos o fluxo de teste — o reconhecimento
+                       abrirá o microfone por conta própria. */
+                    fluxo.getTracks().forEach(function (faixa) {
+                        faixa.stop();
+                    });
+                    iniciarReconhecimento();
+                })
+                .catch(function (erro) {
+                    /* Permissão negada pelo usuário */
+                    labelStatus.textContent = 'Permissão negada. Verifique as configurações.';
+                });
+
+        } else {
+            /* Navegador sem getUserMedia — tenta iniciar diretamente */
+            iniciarReconhecimento();
+        }
+    }
+
+    /*
+     * Função: iniciarReconhecimento
+     * Inicia o reconhecimento após a permissão ser concedida.
+     */
+    function iniciarReconhecimento() {
+        try {
+            reconhecimento.start();
             gravando = true;
-            btnMicrofone.classList.add('gravando'); /* CSS anima o botão */
-            labelStatus.textContent = 'Ouvindo...';
+            btnMicrofone.classList.add('gravando');    /* Animação de pulso vermelho */
+            labelStatus.textContent = 'Ouvindo… toque para parar';
+        } catch (erro) {
+            labelStatus.textContent = 'Tente novamente.';
         }
     }
 
     /*
      * Função: pararGravacao
-     * Desativa o microfone e remove a animação.
+     * Para o microfone e restaura a interface ao estado inicial.
      */
     function pararGravacao() {
-        if (reconhecimento && gravando) {
-            reconhecimento.stop();
-            gravando = false;
-            btnMicrofone.classList.remove('gravando');
-            labelStatus.textContent = 'Pressione e segure para falar';
+        gravando = false;
+        btnMicrofone.classList.remove('gravando');
+        labelStatus.textContent = 'Toque no microfone para falar';
+
+        if (reconhecimento) {
+            try {
+                /* abort() para imediatamente sem tentar processar o áudio */
+                reconhecimento.abort();
+            } catch (erro) { /* Ignora se já estava parado */ }
         }
     }
 
 
     /* ===================================================
-       7. GERENCIAMENTO DOS ITENS
+       8. GERENCIAMENTO DOS ITENS
     =================================================== */
 
     /*
      * Função: adicionarItem
-     * Cria um novo item e insere no array.
-     *
-     * Parâmetro:
-     *   nome — texto do item (string)
+     * Cria novo item com preço zero e não marcado.
      */
     function adicionarItem(nome) {
-        itens.push({
-            nome: nome,
-            preco: 0,         /* Preço inicial zero */
-            marcado: false    /* Começa não marcado */
-        });
-
+        itens.push({ nome: nome, preco: 0, marcado: false });
         renderizar();
         salvarItens();
     }
 
     /*
      * Função: renderizar
-     * Reconstrói toda a lista na tela com base no array "itens".
-     * Chamada sempre que qualquer dado é alterado.
+     * Reconstrói toda a lista na tela a partir do array "itens".
      */
     function renderizar() {
-        listaItens.innerHTML = ''; /* Limpa a lista atual */
+        listaItens.innerHTML = '';
 
         itens.forEach(function (item, indice) {
 
-            /* Elemento <li> da linha */
             var elementoLinha = document.createElement('li');
             elementoLinha.className = 'item' + (item.marcado ? ' marcado' : '');
 
-            /* --- Nome clicável --- */
+            /* Nome — clicável para marcar/desmarcar */
             var elementoNome = document.createElement('div');
-            elementoNome.className = 'item-nome';
+            elementoNome.className   = 'item-nome';
             elementoNome.textContent = item.nome;
             elementoNome.addEventListener('click', function () { marcar(indice); });
 
-            /* --- Preço formatado --- */
+            /* Preço formatado */
             var elementoPreco = document.createElement('div');
-            elementoPreco.className = 'item-preco';
+            elementoPreco.className   = 'item-preco';
             elementoPreco.textContent = formatarPreco(item.preco);
 
-            /* --- Grupo de botões de ação --- */
+            /* Botões de ação */
             var elementoAcoes = document.createElement('div');
             elementoAcoes.className = 'acoes';
 
-            /* Botão Editar — usa a imagem editar.png */
             elementoAcoes.appendChild(criarBotaoComImagem(
-                'btn-editar',
-                'Editar nome do item',
-                'editar.png',
+                'btn-editar', 'Editar nome', 'editar.png',
                 function () { abrirModalEditar(indice); }
             ));
-
-            /* Botão Preço — usa a imagem dinheiro.png */
             elementoAcoes.appendChild(criarBotaoComImagem(
-                'btn-preco',
-                'Editar preço do item',
-                'dinheiro.png',
+                'btn-preco', 'Editar preço', 'dinheiro.png',
                 function () { abrirModalPreco(indice); }
             ));
-
-            /* Botão Excluir — usa a imagem excluir.png */
             elementoAcoes.appendChild(criarBotaoComImagem(
-                'btn-excluir',
-                'Excluir item',
-                'excluir.png',
+                'btn-excluir', 'Excluir item', 'excluir.png',
                 function () { excluir(indice); }
             ));
 
-            /* Monta a linha completa */
             elementoLinha.appendChild(elementoNome);
             elementoLinha.appendChild(elementoPreco);
             elementoLinha.appendChild(elementoAcoes);
-
             listaItens.appendChild(elementoLinha);
         });
 
@@ -279,79 +464,62 @@ document.addEventListener('DOMContentLoaded', function () {
 
     /*
      * Função: criarBotaoComImagem
-     * Cria e retorna um <button> com uma imagem <img> como ícone.
-     *
-     * Parâmetros:
-     *   classe       — classe CSS do botão
-     *   rotulo       — descrição acessível (aria-label e alt da imagem)
-     *   arquivoIcone — nome do arquivo de imagem (ex: "editar.png")
-     *   aoClicar     — função executada ao clicar
+     * Cria um <button> com ícone <img> e clique configurado.
      */
     function criarBotaoComImagem(classe, rotulo, arquivoIcone, aoClicar) {
         var botao = document.createElement('button');
         botao.className = classe;
-        botao.setAttribute('aria-label', rotulo); /* Acessibilidade para leitores de tela */
+        botao.setAttribute('aria-label', rotulo); /* Leitores de tela */
 
-        /* Cria a imagem do ícone */
-        var imagem = document.createElement('img');
-        imagem.src = arquivoIcone;
-        imagem.alt = rotulo;               /* Texto alternativo da imagem */
-        imagem.className = 'icone-acao';   /* Classe CSS que define o tamanho */
+        var imagem       = document.createElement('img');
+        imagem.src       = arquivoIcone;
+        imagem.alt       = rotulo;
+        imagem.className = 'icone-acao';
 
         botao.appendChild(imagem);
         botao.addEventListener('click', aoClicar);
-
         return botao;
     }
 
-    /*
-     * Função: marcar
-     * Alterna o estado comprado/não comprado de um item.
-     */
+    /* Inverte o estado marcado/desmarcado de um item */
     function marcar(indice) {
-        itens[indice].marcado = !itens[indice].marcado; /* Inverte o valor booleano */
+        itens[indice].marcado = !itens[indice].marcado;
         renderizar();
         salvarItens();
     }
 
-    /*
-     * Função: excluir
-     * Remove um item do array pela sua posição.
-     */
+    /* Remove um item do array pelo índice */
     function excluir(indice) {
-        itens.splice(indice, 1); /* Remove 1 elemento a partir da posição */
+        itens.splice(indice, 1);
         renderizar();
         salvarItens();
     }
 
 
     /* ===================================================
-       8. MODAIS
+       9. MODAIS
     =================================================== */
 
-    /*
-     * Função: abrirModalEditar
-     * Abre o modal de nome e preenche com o nome atual do item.
-     */
+    /* Abre o modal de edição de nome e preenche o campo */
     function abrirModalEditar(indice) {
-        indiceAtual = indice;
-        campoEditar.value = itens[indice].nome;
+        indiceAtual          = indice;
+        campoEditar.value    = itens[indice].nome;
         modalEditar.style.display = 'flex';
 
-        /* setTimeout garante que o campo esteja visível antes de receber foco.
-           Necessário para o teclado abrir corretamente em alguns celulares. */
         setTimeout(function () {
             campoEditar.focus();
-            campoEditar.select(); /* Seleciona o texto para facilitar a substituição */
-        }, 100);
+            campoEditar.select();
+            setTimeout(function () {
+                campoEditar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 350);
+        }, 80);
     }
 
-    /* Cancela a edição de nome */
     document.getElementById('cancelarEditar').addEventListener('click', function () {
         modalEditar.style.display = 'none';
+        document.documentElement.style.removeProperty('--altura-visivel');
     });
 
-    /* Confirma a edição de nome */
     document.getElementById('confirmarEditar').addEventListener('click', function () {
         var novoNome = campoEditar.value.trim();
         if (indiceAtual !== -1 && novoNome) {
@@ -359,126 +527,99 @@ document.addEventListener('DOMContentLoaded', function () {
             renderizar();
             salvarItens();
             modalEditar.style.display = 'none';
+            document.documentElement.style.removeProperty('--altura-visivel');
         }
     });
 
-    /* Enter também confirma a edição de nome */
     campoEditar.addEventListener('keydown', function (evento) {
-        if (evento.key === 'Enter') {
-            document.getElementById('confirmarEditar').click();
-        }
+        if (evento.key === 'Enter') document.getElementById('confirmarEditar').click();
     });
 
-    /*
-     * Função: abrirModalPreco
-     * Abre o modal de preço e preenche com o preço atual do item.
-     */
+    /* Abre o modal de edição de preço e preenche o campo */
     function abrirModalPreco(indice) {
-        indiceAtual = indice;
-        campoPreco.value = itens[indice].preco;
+        indiceAtual         = indice;
+        campoPreco.value    = itens[indice].preco;
         modalPreco.style.display = 'flex';
 
         setTimeout(function () {
             campoPreco.focus();
             campoPreco.select();
-        }, 100);
+            setTimeout(function () {
+                campoPreco.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 350);
+        }, 80);
     }
 
-    /* Cancela a edição de preço */
     document.getElementById('cancelarPreco').addEventListener('click', function () {
         modalPreco.style.display = 'none';
+        document.documentElement.style.removeProperty('--altura-visivel');
     });
 
-    /* Confirma a edição de preço */
     document.getElementById('confirmarPreco').addEventListener('click', function () {
         if (indiceAtual !== -1) {
-            /* parseFloat converte texto em número. || 0 garante zero se inválido */
             itens[indiceAtual].preco = parseFloat(campoPreco.value) || 0;
             renderizar();
             salvarItens();
             modalPreco.style.display = 'none';
+            document.documentElement.style.removeProperty('--altura-visivel');
         }
     });
 
-    /* Enter também confirma a edição de preço */
     campoPreco.addEventListener('keydown', function (evento) {
-        if (evento.key === 'Enter') {
-            document.getElementById('confirmarPreco').click();
-        }
+        if (evento.key === 'Enter') document.getElementById('confirmarPreco').click();
     });
 
-    /* Clique no fundo escuro fecha qualquer modal aberto */
+    /* Toque no fundo escuro fecha o modal */
     [modalEditar, modalPreco].forEach(function (modal) {
         modal.addEventListener('click', function (evento) {
-            /* evento.target é o elemento clicado diretamente.
-               Se for o fundo do modal (e não algo dentro dele), fecha. */
             if (evento.target === modal) {
                 modal.style.display = 'none';
+                document.documentElement.style.removeProperty('--altura-visivel');
             }
         });
     });
 
 
     /* ===================================================
-       9. BOTAO DE IMPRESSAO
+       10. BOTAO DE IMPRESSAO
     =================================================== */
 
-    /* Clique no botão "Imprimir Lista" abre o diálogo de impressão do navegador.
-       O CSS no estilos.css (@media print) controla o que aparece no papel:
-       oculta botões, campos e microfone; mostra apenas a lista e o total. */
     btnImprimir.addEventListener('click', function () {
         window.print();
     });
 
 
     /* ===================================================
-       10. TOTAL E ARMAZENAMENTO LOCAL
+       11. TOTAL E ARMAZENAMENTO LOCAL
     =================================================== */
 
-    /*
-     * Função: atualizarTotal
-     * Soma os preços de todos os itens e exibe o resultado.
-     */
+    /* Soma os preços e atualiza o texto do total */
     function atualizarTotal() {
-        /* reduce percorre o array somando os preços.
-           O segundo argumento (0) é o valor inicial do acumulador. */
         var soma = itens.reduce(function (acumulador, item) {
             return acumulador + item.preco;
         }, 0);
-
         labelTotal.textContent = 'Total: ' + formatarPreco(soma);
     }
 
     /*
      * Função: formatarPreco
-     * Converte um número para o formato de moeda brasileira.
-     * Exemplo: 5.9 → "R$ 5,90"
+     * Converte número para moeda brasileira: 5.9 → "R$ 5,90"
      */
     function formatarPreco(valor) {
+        /* toFixed(2): duas casas decimais | replace: troca ponto por vírgula */
         return 'R$ ' + valor.toFixed(2).replace('.', ',');
-        /* toFixed(2): garante duas casas decimais (5.9 → "5.90")
-           replace('.', ','): troca ponto por vírgula (padrão brasileiro) */
     }
 
-    /*
-     * Função: salvarItens
-     * Converte o array para texto JSON e salva no localStorage do navegador.
-     * Os dados persistem mesmo após fechar e reabrir a aba.
-     */
+    /* Salva o array como texto JSON no armazenamento local do navegador */
     function salvarItens() {
         localStorage.setItem('listaCompras', JSON.stringify(itens));
     }
 
-    /*
-     * Função: carregarItens
-     * Lê os itens salvos no localStorage e os exibe.
-     * Chamada uma vez ao abrir a página.
-     */
+    /* Recupera e exibe os itens salvos ao abrir a página */
     function carregarItens() {
         var dadosSalvos = localStorage.getItem('listaCompras');
-
         if (dadosSalvos) {
-            itens = JSON.parse(dadosSalvos); /* Converte de texto JSON para array */
+            itens = JSON.parse(dadosSalvos);
             renderizar();
         }
     }
