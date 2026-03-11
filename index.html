@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
 
-    <!-- viewport sem maximum-scale para não travar zoom,
-         e sem interactive-widget pois não usamos mais o teclado do sistema -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <!-- Configuração de viewport para mobile:
+         - viewport-fit=cover        : lê área segura (notch iOS)
+         - interactive-widget=resizes-content : Android/Chrome encolhe a página
+           quando o teclado abre, dividindo a tela com ele -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
 
     <meta name="theme-color" content="#4285f4">
     <meta name="mobile-web-app-capable" content="yes">
@@ -19,32 +21,28 @@
 
 <body>
 
-    <!-- Página principal — tudo que o usuário vê -->
     <div class="pagina">
 
         <h1>Lista de Compras</h1>
 
-        <!-- ── Caixa de entrada ── -->
+        <!-- Caixa de entrada -->
         <div class="caixa" id="caixaEntrada">
 
-            <!-- Campo de texto + botão Adicionar.
-                 readonly: impede o teclado do SISTEMA de abrir.
-                 O teclado do SITE é acionado pelo JavaScript ao clicar no campo. -->
             <div class="entrada-texto">
                 <input
                     type="text"
                     id="campoTexto"
-                    placeholder="Toque aqui para digitar..."
-                    readonly
+                    placeholder="Digite um item..."
                     autocomplete="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    enterkeyhint="done"
                 >
                 <button class="btn-adicionar" id="btnAdicionar">Adicionar</button>
             </div>
 
-            <!-- Separador visual -->
             <div class="separador">ou use o microfone</div>
 
-            <!-- Botão do microfone -->
             <div class="entrada-voz">
                 <button id="btnMicrofone" class="btn-microfone" title="Toque para falar">
                     <img src="microphone.png" alt="Microfone" class="icone-microfone">
@@ -52,17 +50,15 @@
                 <div id="status" class="status">Toque no microfone para falar</div>
             </div>
 
-        </div><!-- fim caixaEntrada -->
+        </div>
 
-
-        <!-- ── Caixa da lista ── -->
+        <!-- Caixa da lista -->
         <div class="caixa">
             <ul id="lista"></ul>
             <div id="total" class="total">Total: R$ 0,00</div>
         </div>
 
-
-        <!-- ── Botão de impressão ── -->
+        <!-- Botão de impressão -->
         <div class="area-impressao">
             <button class="btn-imprimir" id="btnImprimir">
                 <svg viewBox="0 0 24 24" class="icone-impressora">
@@ -72,147 +68,7 @@
             </button>
         </div>
 
-    </div><!-- fim .pagina -->
-
-
-    <!-- ══════════════════════════════════════════════════
-         TECLADO DO SITE
-         Fica fixo na parte inferior da tela.
-         Começa oculto — o JavaScript o exibe quando necessário.
-         Possui duas "faces": letras e números/símbolos.
-    ══════════════════════════════════════════════════ -->
-    <div id="teclado" class="teclado" aria-label="Teclado">
-
-        <!-- Visor: mostra o que está sendo digitado + botão fechar -->
-        <div class="teclado-visor">
-            <span id="tecladoVisorTexto" class="teclado-visor-texto"></span>
-            <button class="teclado-fechar" id="tecladoFechar" aria-label="Fechar teclado">✕</button>
-        </div>
-
-        <!-- Face das LETRAS (padrão QWERTY em pt-BR) -->
-        <div id="tecladoLetras" class="teclado-face">
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char="q">q</button>
-                <button class="tecla" data-char="w">w</button>
-                <button class="tecla" data-char="e">e</button>
-                <button class="tecla" data-char="r">r</button>
-                <button class="tecla" data-char="t">t</button>
-                <button class="tecla" data-char="y">y</button>
-                <button class="tecla" data-char="u">u</button>
-                <button class="tecla" data-char="i">i</button>
-                <button class="tecla" data-char="o">o</button>
-                <button class="tecla" data-char="p">p</button>
-            </div>
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char="a">a</button>
-                <button class="tecla" data-char="s">s</button>
-                <button class="tecla" data-char="d">d</button>
-                <button class="tecla" data-char="f">f</button>
-                <button class="tecla" data-char="g">g</button>
-                <button class="tecla" data-char="h">h</button>
-                <button class="tecla" data-char="j">j</button>
-                <button class="tecla" data-char="k">k</button>
-                <button class="tecla" data-char="l">l</button>
-                <button class="tecla tecla-maiuscula" id="btnMaiuscula" data-acao="maiuscula">⇧</button>
-            </div>
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char="z">z</button>
-                <button class="tecla" data-char="x">x</button>
-                <button class="tecla" data-char="c">c</button>
-                <button class="tecla" data-char="v">v</button>
-                <button class="tecla" data-char="b">b</button>
-                <button class="tecla" data-char="n">n</button>
-                <button class="tecla" data-char="m">m</button>
-                <button class="tecla tecla-apagar" data-acao="apagar">⌫</button>
-            </div>
-
-            <!-- Linha de letras especiais do português -->
-            <div class="teclado-linha">
-                <button class="tecla" data-char="ã">ã</button>
-                <button class="tecla" data-char="â">â</button>
-                <button class="tecla" data-char="á">á</button>
-                <button class="tecla" data-char="à">à</button>
-                <button class="tecla" data-char="é">é</button>
-                <button class="tecla" data-char="ê">ê</button>
-                <button class="tecla" data-char="í">í</button>
-                <button class="tecla" data-char="ó">ó</button>
-                <button class="tecla" data-char="ô">ô</button>
-                <button class="tecla" data-char="õ">õ</button>
-                <button class="tecla" data-char="ú">ú</button>
-                <button class="tecla" data-char="ç">ç</button>
-            </div>
-
-            <div class="teclado-linha">
-                <!-- Alterna para a face de números -->
-                <button class="tecla tecla-alternador" data-acao="numeros">123</button>
-                <button class="tecla tecla-espaco" data-char=" ">espaço</button>
-                <!-- Confirma e adiciona o item -->
-                <button class="tecla tecla-confirmar" data-acao="confirmar">OK ✓</button>
-            </div>
-
-        </div><!-- fim #tecladoLetras -->
-
-
-        <!-- Face dos NÚMEROS e símbolos -->
-        <div id="tecladoNumeros" class="teclado-face teclado-face-oculta">
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char="1">1</button>
-                <button class="tecla" data-char="2">2</button>
-                <button class="tecla" data-char="3">3</button>
-                <button class="tecla" data-char="4">4</button>
-                <button class="tecla" data-char="5">5</button>
-                <button class="tecla" data-char="6">6</button>
-                <button class="tecla" data-char="7">7</button>
-                <button class="tecla" data-char="8">8</button>
-                <button class="tecla" data-char="9">9</button>
-                <button class="tecla" data-char="0">0</button>
-            </div>
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char="-">-</button>
-                <button class="tecla" data-char="/">/ </button>
-                <button class="tecla" data-char=":"">:</button>
-                <button class="tecla" data-char=";"">;</button>
-                <button class="tecla" data-char="(">(</button>
-                <button class="tecla" data-char=")">)</button>
-                <button class="tecla" data-char="$">$</button>
-                <button class="tecla" data-char="&">&</button>
-                <button class="tecla" data-char="@">@</button>
-                <button class="tecla tecla-apagar" data-acao="apagar">⌫</button>
-            </div>
-
-            <div class="teclado-linha">
-                <button class="tecla" data-char=".">.</button>
-                <button class="tecla" data-char=",">,</button>
-                <button class="tecla" data-char="?">?</button>
-                <button class="tecla" data-char="!">!</button>
-                <button class="tecla" data-char="'>'">´</button>
-                <button class="tecla" data-char='"'>"</button>
-                <button class="tecla" data-char="kg">kg</button>
-                <button class="tecla" data-char="un">un</button>
-            </div>
-
-            <div class="teclado-linha">
-                <!-- Volta para a face de letras -->
-                <button class="tecla tecla-alternador" data-acao="letras">ABC</button>
-                <button class="tecla tecla-espaco" data-char=" ">espaço</button>
-                <button class="tecla tecla-confirmar" data-acao="confirmar">OK ✓</button>
-            </div>
-
-        </div><!-- fim #tecladoNumeros -->
-
-    </div><!-- fim #teclado -->
-
-
-    <!-- ══════════════════════════════════════════════════
-         MODAIS — editar nome e preço de itens existentes.
-         Esses campos usam o teclado do sistema normalmente,
-         pois aparecem sobre a lista (não há conflito de layout).
-    ══════════════════════════════════════════════════ -->
+    </div>
 
     <!-- Modal editar nome -->
     <div id="modalEditar" class="modal">
@@ -238,7 +94,6 @@
             </div>
         </div>
     </div>
-
 
     <script src="aplicativo.js"></script>
 </body>

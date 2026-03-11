@@ -5,16 +5,11 @@
   1.  Inicialização
   2.  Referências HTML
   3.  Estado global
-  4.  TECLADO PRÓPRIO DO SITE
-      4a. Abrir / fechar
-      4b. Digitar caracteres
-      4c. Ações especiais (apagar, maiúscula, confirmar)
-      4d. Alternar faces (letras ↔ números)
-      4e. Sincronizar com o campo real
-  5.  Entrada por texto (campo + botão Adicionar)
-  6.  Entrada por voz (microfone)
+  4.  Visual Viewport API (teclado do sistema)
+  5.  Entrada por texto
+  6.  Entrada por voz
   7.  Gerenciamento de itens
-  8.  Modais (editar nome e preço)
+  8.  Modais
   9.  Botão de impressão
   10. Total e localStorage
 =======================================================
@@ -22,12 +17,7 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-
-    /* ═══════════════════════════════════════════
-       2. REFERÊNCIAS HTML
-    ═══════════════════════════════════════════ */
-
-    /* Página */
+    /* ── 2. Referências HTML ── */
     var campoTexto   = document.getElementById('campoTexto');
     var btnAdicionar = document.getElementById('btnAdicionar');
     var btnMicrofone = document.getElementById('btnMicrofone');
@@ -35,247 +25,116 @@ document.addEventListener('DOMContentLoaded', function () {
     var listaItens   = document.getElementById('lista');
     var labelTotal   = document.getElementById('total');
     var btnImprimir  = document.getElementById('btnImprimir');
-
-    /* Teclado do site */
-    var teclado          = document.getElementById('teclado');
-    var tecladoVisor     = document.getElementById('tecladoVisorTexto');
-    var tecladoFechar    = document.getElementById('tecladoFechar');
-    var tecladoLetras    = document.getElementById('tecladoLetras');
-    var tecladoNumeros   = document.getElementById('tecladoNumeros');
-    var btnMaiuscula     = document.getElementById('btnMaiuscula');
-
-    /* Modais */
     var modalEditar  = document.getElementById('modalEditar');
     var modalPreco   = document.getElementById('modalPreco');
     var campoEditar  = document.getElementById('campoEditar');
     var campoPreco   = document.getElementById('campoPreco');
 
+    /* ── 3. Estado global ── */
+    var itens        = [];
+    var indiceAtual  = -1;
+    var reconhecimento = null;
+    var gravando     = false;
+    var alturaOriginal = window.innerHeight;
 
-    /* ═══════════════════════════════════════════
-       3. ESTADO GLOBAL
-    ═══════════════════════════════════════════ */
-
-    var itens        = [];          /* Array de itens: { nome, preco, marcado } */
-    var indiceAtual  = -1;          /* Índice do item sendo editado nos modais  */
-    var reconhecimento = null;      /* Objeto de reconhecimento de voz          */
-    var gravando     = false;       /* true quando o microfone está ativo       */
-
-    /* Estado do teclado próprio */
-    var tecladoTexto    = '';       /* Texto sendo composto no teclado          */
-    var maiusculaAtiva  = false;    /* true = próxima letra será maiúscula      */
-    var faceLock        = false;    /* Evita cliques duplos nas teclas          */
+    /* ── 4. Inicialização ── */
+    carregarItens();
+    iniciarVoz();
+    iniciarControleDoTeclado();
 
 
-    /* ═══════════════════════════════════════════
-       4. TECLADO PRÓPRIO DO SITE
+    /* ══════════════════════════════════════════════
+       4. VISUAL VIEWPORT API
 
-       Como funciona:
-       • O campo <input> tem "readonly" — o teclado do sistema NUNCA abre.
-       • Ao tocar no campo, o teclado do SITE sobe da base da tela.
-       • O teclado gerencia uma variável "tecladoTexto" e a espelha
-         no campo visível e no visor interno do teclado.
-       • Ao pressionar OK, o texto é adicionado como item.
-    ═══════════════════════════════════════════ */
+       Detecta em tempo real a altura disponível
+       quando o teclado do sistema abre, e atualiza
+       a variável CSS --altura-visivel. O modal usa
+       essa variável para se reposicionar acima do
+       teclado automaticamente.
+    ══════════════════════════════════════════════ */
 
-    /* ── 4a. Abrir e fechar ── */
-
-    /* Abre o teclado ao tocar no campo de texto */
-    campoTexto.addEventListener('click', abrirTeclado);
-    campoTexto.addEventListener('touchend', function (e) {
-        e.preventDefault();   /* Evita que o iOS tente abrir o teclado nativo */
-        abrirTeclado();
-    }, { passive: false });
-
-    function abrirTeclado() {
-        tecladoTexto = campoTexto.value; /* Preserva texto já digitado */
-        atualizarVisor();
-        teclado.classList.add('teclado-visivel');
-        campoTexto.classList.add('campo-ativo');
-
-        /* Informa ao CSS a altura do teclado para que a página role
-           e o campo fique visível acima do teclado */
-        setTimeout(function () {
-            var altTeclado = teclado.offsetHeight;
-            document.documentElement.style.setProperty('--altura-teclado', altTeclado + 'px');
-            campoTexto.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 270); /* Aguarda a animação de abertura terminar (transition: 0.25s) */
+    function iniciarControleDoTeclado() {
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', aoMudarViewport);
+            window.visualViewport.addEventListener('scroll', aoMudarViewport);
+        } else {
+            window.addEventListener('resize', aoMudarViewportFallback);
+        }
     }
 
-    function fecharTeclado() {
-        teclado.classList.remove('teclado-visivel');
-        campoTexto.classList.remove('campo-ativo');
-        document.documentElement.style.setProperty('--altura-teclado', '0px');
+    function aoMudarViewport() {
+        var h = window.visualViewport.height;
+        document.documentElement.style.setProperty('--altura-visivel', h + 'px');
+
+        /* Rola o campo focado para ficar visível */
+        var focado = document.querySelector('.modal[style*="flex"] input:focus');
+        if (focado) focado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        if (document.activeElement === campoTexto)
+            campoTexto.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    tecladoFechar.addEventListener('click', fecharTeclado);
-
-
-    /* ── 4b. Digitar caracteres ── */
-
-    /* Delegação de eventos: um único listener no teclado inteiro
-       captura cliques em QUALQUER tecla filha */
-    teclado.addEventListener('click', function (evento) {
-        var tecla = evento.target.closest('[data-char],[data-acao]');
-        if (!tecla) return;
-
-        var char  = tecla.getAttribute('data-char');
-        var acao  = tecla.getAttribute('data-acao');
-
-        if (char !== null) {
-            /* É uma tecla de caractere — adiciona ao texto */
-            var letra = maiusculaAtiva ? char.toUpperCase() : char;
-            tecladoTexto += letra;
-
-            /* Maiúscula automática: desativa após a primeira letra */
-            if (maiusculaAtiva) {
-                maiusculaAtiva = false;
-                btnMaiuscula.classList.remove('ativo');
-                atualizarLetrasTeclado();
+    function aoMudarViewportFallback() {
+        var h = window.innerHeight;
+        if (alturaOriginal - h > 150) {
+            document.documentElement.style.setProperty('--altura-visivel', h + 'px');
+            if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+                setTimeout(function () {
+                    document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 100);
             }
+        } else {
+            document.documentElement.style.removeProperty('--altura-visivel');
+        }
+    }
 
-            atualizarVisor();
+    function limparAlturaVisivel() {
+        if (!document.querySelector('.modal[style*="flex"]'))
+            document.documentElement.style.removeProperty('--altura-visivel');
+    }
 
-        } else if (acao) {
-            /* É uma tecla de ação especial */
-            processarAcao(acao);
+
+    /* ══════════════════════════════════════════════
+       5. ENTRADA POR TEXTO
+    ══════════════════════════════════════════════ */
+
+    btnAdicionar.addEventListener('click', function () {
+        var nome = campoTexto.value.trim();
+        if (nome) {
+            adicionarItem(nome);
+            campoTexto.value = '';
+            campoTexto.focus();
         }
     });
 
-    /* Toque longo no botão apagar: apaga continuamente enquanto segura */
-    var intervaloApagar = null;
+    campoTexto.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') btnAdicionar.click();
+    });
 
-    teclado.addEventListener('pointerdown', function (e) {
-        var tecla = e.target.closest('[data-acao="apagar"]');
-        if (!tecla) return;
-
-        /* Inicia apagamento contínuo após 400ms segurando */
-        intervaloApagar = setTimeout(function () {
-            intervaloApagar = setInterval(function () {
-                if (tecladoTexto.length > 0) {
-                    tecladoTexto = tecladoTexto.slice(0, -1);
-                    atualizarVisor();
-                }
-            }, 80);
+    /* Rola para o campo após o teclado subir */
+    campoTexto.addEventListener('focus', function () {
+        setTimeout(function () {
+            campoTexto.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }, 400);
     });
 
-    /* Para o apagamento contínuo ao soltar */
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
-        teclado.addEventListener(ev, function () {
-            if (intervaloApagar) {
-                clearTimeout(intervaloApagar);
-                clearInterval(intervaloApagar);
-                intervaloApagar = null;
-            }
-        });
-    });
+    campoTexto.addEventListener('blur', limparAlturaVisivel);
 
 
-    /* ── 4c. Ações especiais ── */
-
-    function processarAcao(acao) {
-        switch (acao) {
-
-            case 'apagar':
-                /* Remove o último caractere */
-                if (tecladoTexto.length > 0) {
-                    tecladoTexto = tecladoTexto.slice(0, -1);
-                    atualizarVisor();
-                }
-                break;
-
-            case 'maiuscula':
-                /* Alterna maiúscula / minúscula para a próxima tecla */
-                maiusculaAtiva = !maiusculaAtiva;
-                btnMaiuscula.classList.toggle('ativo', maiusculaAtiva);
-                atualizarLetrasTeclado();
-                break;
-
-            case 'numeros':
-                /* Mostra a face de números e símbolos */
-                tecladoLetras.classList.add('teclado-face-oculta');
-                tecladoNumeros.classList.remove('teclado-face-oculta');
-                break;
-
-            case 'letras':
-                /* Volta para a face de letras */
-                tecladoNumeros.classList.add('teclado-face-oculta');
-                tecladoLetras.classList.remove('teclado-face-oculta');
-                break;
-
-            case 'confirmar':
-                /* Adiciona o item e fecha o teclado */
-                var nome = tecladoTexto.trim();
-                if (nome) {
-                    adicionarItem(nome);
-                    tecladoTexto = '';
-                    campoTexto.value = '';
-                    atualizarVisor();
-                }
-                fecharTeclado();
-                break;
-        }
-    }
-
-
-    /* ── 4d. Atualizar visor e campo ── */
-
-    function atualizarVisor() {
-        /* Mostra o texto no visor interno do teclado */
-        tecladoVisor.textContent = tecladoTexto;
-
-        /* Espelha no campo de texto visível da página */
-        campoTexto.value = tecladoTexto;
-
-        /* Placeholder personalizado quando vazio */
-        if (tecladoTexto === '') {
-            campoTexto.setAttribute('placeholder', 'Toque aqui para digitar...');
-        } else {
-            campoTexto.setAttribute('placeholder', '');
-        }
-    }
-
-    /* Atualiza as letras do teclado para maiúsculo/minúsculo */
-    function atualizarLetrasTeclado() {
-        var teclas = tecladoLetras.querySelectorAll('[data-char]');
-        teclas.forEach(function (t) {
-            var char = t.getAttribute('data-char');
-            /* Só atualiza letras simples (não acentuadas de comprimento 1) */
-            if (char.length === 1) {
-                t.textContent = maiusculaAtiva ? char.toUpperCase() : char.toLowerCase();
-            }
-        });
-    }
-
-
-    /* ═══════════════════════════════════════════
-       5. ENTRADA POR TEXTO
-       O botão "Adicionar" usa o texto do teclado.
-    ═══════════════════════════════════════════ */
-
-    btnAdicionar.addEventListener('click', function () {
-        /* Tenta usar o texto do teclado; fallback para o campo direto */
-        var nome = (tecladoTexto || campoTexto.value).trim();
-        if (nome) {
-            adicionarItem(nome);
-            tecladoTexto    = '';
-            campoTexto.value = '';
-            atualizarVisor();
-            fecharTeclado();
-        }
-    });
-
-
-    /* ═══════════════════════════════════════════
+    /* ══════════════════════════════════════════════
        6. ENTRADA POR VOZ
-    ═══════════════════════════════════════════ */
+
+       • Toque simples para ligar/desligar (não "segure")
+       • continuous: false — compatível com iOS Safari
+       • getUserMedia() pede permissão explicitamente,
+         necessário no iOS dentro de um gesto do usuário
+    ══════════════════════════════════════════════ */
 
     function iniciarVoz() {
         var temAPI = ('SpeechRecognition' in window) || ('webkitSpeechRecognition' in window);
 
         if (!temAPI) {
-            labelStatus.textContent = 'Voz não suportada neste navegador.';
-            btnMicrofone.disabled   = true;
+            labelStatus.textContent    = 'Voz não suportada neste navegador.';
+            btnMicrofone.disabled      = true;
             btnMicrofone.style.opacity = '0.4';
             return;
         }
@@ -284,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
         reconhecimento = new APIDeVoz();
 
         reconhecimento.lang            = 'pt-BR';
-        reconhecimento.continuous      = false;   /* false = compatível com iOS */
+        reconhecimento.continuous      = false;
         reconhecimento.interimResults  = false;
         reconhecimento.maxAlternatives = 1;
 
@@ -294,12 +153,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 adicionarItem(texto);
                 labelStatus.textContent = 'Adicionado: "' + texto + '"';
             }
-            /* Reinicia enquanto o usuário não desligar */
-            if (gravando) {
-                setTimeout(function () {
-                    try { reconhecimento.start(); } catch (e) {}
-                }, 150);
-            }
+            if (gravando) setTimeout(function () {
+                try { reconhecimento.start(); } catch (e) {}
+            }, 150);
         };
 
         reconhecimento.onerror = function (evento) {
@@ -328,11 +184,9 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         reconhecimento.onend = function () {
-            if (gravando) {
-                setTimeout(function () {
-                    try { reconhecimento.start(); } catch (e) { pararGravacao(); }
-                }, 150);
-            }
+            if (gravando) setTimeout(function () {
+                try { reconhecimento.start(); } catch (e) { pararGravacao(); }
+            }, 150);
         };
 
         labelStatus.textContent = 'Toque no microfone para falar';
@@ -375,61 +229,54 @@ document.addEventListener('DOMContentLoaded', function () {
         gravando = false;
         btnMicrofone.classList.remove('gravando');
         labelStatus.textContent = 'Toque no microfone para falar';
-        if (reconhecimento) {
-            try { reconhecimento.abort(); } catch (e) {}
-        }
+        if (reconhecimento) try { reconhecimento.abort(); } catch (e) {}
     }
 
 
-    /* ═══════════════════════════════════════════
+    /* ══════════════════════════════════════════════
        7. GERENCIAMENTO DE ITENS
-    ═══════════════════════════════════════════ */
+    ══════════════════════════════════════════════ */
 
     function adicionarItem(nome) {
         itens.push({ nome: nome, preco: 0, marcado: false });
-        renderizar();
-        salvarItens();
+        renderizar(); salvarItens();
     }
 
     function renderizar() {
         listaItens.innerHTML = '';
-
-        itens.forEach(function (item, indice) {
+        itens.forEach(function (item, i) {
             var li = document.createElement('li');
             li.className = 'item' + (item.marcado ? ' marcado' : '');
 
             var nome = document.createElement('div');
-            nome.className   = 'item-nome';
+            nome.className = 'item-nome';
             nome.textContent = item.nome;
-            nome.addEventListener('click', function () { marcar(indice); });
+            nome.addEventListener('click', function () { marcar(i); });
 
             var preco = document.createElement('div');
-            preco.className   = 'item-preco';
+            preco.className = 'item-preco';
             preco.textContent = formatarPreco(item.preco);
 
             var acoes = document.createElement('div');
             acoes.className = 'acoes';
-            acoes.appendChild(criarBotao('btn-editar', 'Editar nome',  'editar.png',   function () { abrirModalEditar(indice); }));
-            acoes.appendChild(criarBotao('btn-preco',  'Editar preço', 'dinheiro.png', function () { abrirModalPreco(indice);  }));
-            acoes.appendChild(criarBotao('btn-excluir','Excluir',      'excluir.png',  function () { excluir(indice);          }));
+            acoes.appendChild(criarBotao('btn-editar',  'Editar nome',  'editar.png',   function () { abrirModalEditar(i); }));
+            acoes.appendChild(criarBotao('btn-preco',   'Editar preço', 'dinheiro.png', function () { abrirModalPreco(i);  }));
+            acoes.appendChild(criarBotao('btn-excluir', 'Excluir',      'excluir.png',  function () { excluir(i);          }));
 
-            li.appendChild(nome);
-            li.appendChild(preco);
-            li.appendChild(acoes);
+            li.appendChild(nome); li.appendChild(preco); li.appendChild(acoes);
             listaItens.appendChild(li);
         });
-
         atualizarTotal();
     }
 
-    function criarBotao(classe, rotulo, icone, aoClicar) {
+    function criarBotao(classe, rotulo, icone, fn) {
         var btn = document.createElement('button');
         btn.className = classe;
         btn.setAttribute('aria-label', rotulo);
         var img = document.createElement('img');
         img.src = icone; img.alt = rotulo; img.className = 'icone-acao';
         btn.appendChild(img);
-        btn.addEventListener('click', aoClicar);
+        btn.addEventListener('click', fn);
         return btn;
     }
 
@@ -437,28 +284,32 @@ document.addEventListener('DOMContentLoaded', function () {
     function excluir(i) { itens.splice(i, 1); renderizar(); salvarItens(); }
 
 
-    /* ═══════════════════════════════════════════
-       8. MODAIS (editar nome e preço)
-       Esses campos usam o teclado do SISTEMA — aparecem
-       flutuando sobre a lista, então não há conflito.
-    ═══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════
+       8. MODAIS
+    ══════════════════════════════════════════════ */
 
     function abrirModalEditar(indice) {
         indiceAtual = indice;
         campoEditar.value = itens[indice].nome;
         modalEditar.style.display = 'flex';
-        setTimeout(function () { campoEditar.focus(); campoEditar.select(); }, 80);
+        setTimeout(function () {
+            campoEditar.focus(); campoEditar.select();
+            setTimeout(function () {
+                campoEditar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 350);
+        }, 80);
     }
 
-    document.getElementById('cancelarEditar').addEventListener('click', function () {
-        modalEditar.style.display = 'none';
-    });
+    function fecharModal(modal) {
+        modal.style.display = 'none';
+        document.documentElement.style.removeProperty('--altura-visivel');
+    }
+
+    document.getElementById('cancelarEditar').addEventListener('click',  function () { fecharModal(modalEditar); });
     document.getElementById('confirmarEditar').addEventListener('click', function () {
         var v = campoEditar.value.trim();
         if (indiceAtual !== -1 && v) {
-            itens[indiceAtual].nome = v;
-            renderizar(); salvarItens();
-            modalEditar.style.display = 'none';
+            itens[indiceAtual].nome = v; renderizar(); salvarItens(); fecharModal(modalEditar);
         }
     });
     campoEditar.addEventListener('keydown', function (e) {
@@ -469,17 +320,19 @@ document.addEventListener('DOMContentLoaded', function () {
         indiceAtual = indice;
         campoPreco.value = itens[indice].preco;
         modalPreco.style.display = 'flex';
-        setTimeout(function () { campoPreco.focus(); campoPreco.select(); }, 80);
+        setTimeout(function () {
+            campoPreco.focus(); campoPreco.select();
+            setTimeout(function () {
+                campoPreco.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 350);
+        }, 80);
     }
 
-    document.getElementById('cancelarPreco').addEventListener('click', function () {
-        modalPreco.style.display = 'none';
-    });
+    document.getElementById('cancelarPreco').addEventListener('click',  function () { fecharModal(modalPreco); });
     document.getElementById('confirmarPreco').addEventListener('click', function () {
         if (indiceAtual !== -1) {
             itens[indiceAtual].preco = parseFloat(campoPreco.value) || 0;
-            renderizar(); salvarItens();
-            modalPreco.style.display = 'none';
+            renderizar(); salvarItens(); fecharModal(modalPreco);
         }
     });
     campoPreco.addEventListener('keydown', function (e) {
@@ -488,22 +341,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
     [modalEditar, modalPreco].forEach(function (modal) {
         modal.addEventListener('click', function (e) {
-            if (e.target === modal) modal.style.display = 'none';
+            if (e.target === modal) fecharModal(modal);
         });
     });
 
 
-    /* ═══════════════════════════════════════════
-       9. BOTÃO DE IMPRESSÃO
-    ═══════════════════════════════════════════ */
-
+    /* ── 9. Impressão ── */
     btnImprimir.addEventListener('click', function () { window.print(); });
 
 
-    /* ═══════════════════════════════════════════
-       10. TOTAL E LOCALSTORAGE
-    ═══════════════════════════════════════════ */
-
+    /* ── 10. Total e localStorage ── */
     function atualizarTotal() {
         var soma = itens.reduce(function (ac, item) { return ac + item.preco; }, 0);
         labelTotal.textContent = 'Total: ' + formatarPreco(soma);
@@ -513,17 +360,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return 'R$ ' + v.toFixed(2).replace('.', ',');
     }
 
-    function salvarItens() {
-        localStorage.setItem('listaCompras', JSON.stringify(itens));
-    }
-
+    function salvarItens()   { localStorage.setItem('listaCompras', JSON.stringify(itens)); }
     function carregarItens() {
         var d = localStorage.getItem('listaCompras');
         if (d) { itens = JSON.parse(d); renderizar(); }
     }
-
-    /* ── Iniciar ── */
-    carregarItens();
-    iniciarVoz();
 
 }); /* fim DOMContentLoaded */
