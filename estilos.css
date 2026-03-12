@@ -1,218 +1,720 @@
 /*
 =======================================================
-  ESTILOS.CSS — Lista de Compras
+  ESTILOS.CSS — Listify
 =======================================================
+  Organização:
   1.  Reset e base
-  2.  Layout
-  3.  Caixas
-  4.  Entrada por texto
-  5.  Separador
-  6.  Entrada por voz
-  7.  Lista de itens
-  8.  Total
-  9.  Botão de impressão
-  10. Modais
-  11. Animação de gravação
-  12. Responsividade
-  13. Impressão
+  2.  Layout da página
+  3.  Cabeçalho / Logo Listify
+  4.  Caixas (cartões brancos)
+  5.  Entrada por texto
+  6.  Separador
+  7.  Entrada por voz
+  8.  Lista de itens
+  9.  Total
+  10. Botão de impressão
+  11. Modal unificado (editar nome + preço)
+  12. Animação de gravação
+  13. Responsividade
+  14. Estilos de impressão (@media print)
 =======================================================
 */
 
-/* ── 1. Reset ── */
+
+/* ═══════════════════════════════════════
+   1. RESET E BASE
+   Zera margens e paddings do navegador
+   para garantir aparência consistente
+   em todos os dispositivos.
+═══════════════════════════════════════ */
+
 * {
-    margin: 0; padding: 0;
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
+    /* Remove o destaque azul ao tocar em elementos no celular */
     -webkit-tap-highlight-color: transparent;
 }
-html { font-size: 16px; height: 100%; }
+
+html {
+    font-size: 16px;
+    height: 100%;
+}
+
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f2f5;
+
+    /* 100vh: fallback para navegadores antigos */
     min-height: 100vh;
+    /* 100dvh (dynamic viewport height): exclui o teclado virtual automaticamente */
     min-height: 100dvh;
+
     padding: 16px;
     scroll-behavior: smooth;
 }
 
-/* ── 2. Layout ── */
-.pagina { max-width: 600px; margin: 0 auto; }
-h1 {
-    text-align: center;
-    margin-bottom: 16px;
-    color: #3a3a3a;
-    font-size: clamp(1.3rem, 5vw, 1.8rem);
+
+/* ═══════════════════════════════════════
+   2. LAYOUT DA PÁGINA
+═══════════════════════════════════════ */
+
+.pagina {
+    max-width: 600px; /* Largura máxima para boa leitura em telas grandes */
+    margin: 0 auto;   /* Centraliza horizontalmente */
+}
+
+
+/* ═══════════════════════════════════════
+   3. CABEÇALHO / LOGO LISTIFY
+
+   Layout horizontal: ícone + nome.
+   O nome usa um gradiente de texto
+   azul → verde, igual à identidade
+   visual do Listify.
+═══════════════════════════════════════ */
+
+.cabecalho {
+    display: flex;
+    align-items: center;
+    justify-content: center;    /* Centraliza o conjunto ícone + nome */
+    gap: 12px;
+    margin-bottom: 20px;
     padding-top: 8px;
 }
 
-/* ── 3. Caixas ── */
+/* Ícone do carrinho kawaii */
+.logo-icone {
+    /* Tamanho fluido: mínimo 44px, ideal 11% da tela, máximo 60px */
+    width:  clamp(44px, 11vw, 60px);
+    height: clamp(44px, 11vw, 60px);
+    object-fit: contain;
+    /* Leve sombra para destacar o ícone do fundo claro */
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18));
+}
+
+/* Nome "Listify" com gradiente azul → verde */
+.logo-texto {
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
+    font-weight: 900;           /* Negrito extra (extra-bold) */
+    letter-spacing: -0.5px;
+
+    /* Gradiente de texto: azul (#2563eb) → verde (#16a34a) */
+    background: linear-gradient(90deg, #2563eb 0%, #16a34a 100%);
+    -webkit-background-clip: text;  /* Aplica o gradiente apenas ao texto (Chrome/Safari) */
+    background-clip: text;
+    -webkit-text-fill-color: transparent; /* Torna o preenchimento do texto transparente */
+    color: transparent;                   /* Fallback para navegadores sem suporte */
+}
+
+
+/* ═══════════════════════════════════════
+   4. CAIXAS (CARTÕES BRANCOS)
+═══════════════════════════════════════ */
+
 .caixa {
     background-color: white;
     border-radius: 16px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08); /* Sombra suave */
     padding: 16px;
     margin-bottom: 16px;
 }
 
-/* ── 4. Entrada por texto ── */
-.entrada-texto { display: flex; gap: 8px; margin-bottom: 16px; }
+
+/* ═══════════════════════════════════════
+   5. ENTRADA POR TEXTO
+═══════════════════════════════════════ */
+
+.entrada-texto {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
 
 .entrada-texto input {
-    flex: 1; min-width: 0;
+    flex: 1;
+    min-width: 0; /* Evita overflow em telas pequenas */
     padding: 12px 14px;
     border: 1.5px solid #ddd;
     border-radius: 10px;
-    /* 16px mínimo evita zoom automático no iOS ao focar */
+    /* font-size mínimo de 16px evita zoom automático no iOS ao focar */
     font-size: max(16px, 1em);
     color: #3a3a3a;
     background: #fafafa;
-    -webkit-appearance: none; appearance: none;
+    -webkit-appearance: none;
+    appearance: none;
 }
+
 .entrada-texto input:focus {
-    outline: none; border-color: #4285f4; background: white;
+    outline: none;
+    border-color: #2563eb; /* Azul Listify ao focar */
+    background: white;
 }
 
 .btn-adicionar {
     padding: 12px 18px;
-    background-color: #4285f4; color: white;
-    border: none; border-radius: 10px;
-    font-size: clamp(14px, 4vw, 16px); font-weight: bold;
-    cursor: pointer; white-space: nowrap;
-    touch-action: manipulation; min-height: 48px;
+    background-color: #2563eb; /* Azul Listify */
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;         /* Não quebra o texto "Adicionar" */
+    touch-action: manipulation;
+    min-height: 48px;            /* Área de toque mínima recomendada */
 }
-.btn-adicionar:active { background-color: #2c6fd4; transform: scale(0.97); }
 
-/* ── 5. Separador ── */
+.btn-adicionar:active {
+    background-color: #1d4ed8;
+    transform: scale(0.97);
+}
+
+
+/* ═══════════════════════════════════════
+   6. SEPARADOR
+   Linha horizontal com texto no centro.
+═══════════════════════════════════════ */
+
 .separador {
-    text-align: center; color: #bbb; font-size: 13px;
-    margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
-}
-.separador::before, .separador::after {
-    content: ''; flex: 1; height: 1px; background: #e0e0e0;
+    text-align: center;
+    color: #bbb;
+    font-size: 13px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* ── 6. Voz ── */
-.entrada-voz { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+/* Linhas laterais geradas por CSS (sem elemento HTML extra) */
+.separador::before,
+.separador::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e0e0e0;
+}
+
+
+/* ═══════════════════════════════════════
+   7. ENTRADA POR VOZ
+═══════════════════════════════════════ */
+
+.entrada-voz {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
 .btn-microfone {
-    width: clamp(56px, 14vw, 72px); height: clamp(56px, 14vw, 72px);
-    border-radius: 50%; background: transparent; border: none;
-    cursor: pointer; display: flex; justify-content: center; align-items: center;
-    touch-action: manipulation; transition: transform 0.2s, filter 0.2s;
-    -webkit-user-select: none; user-select: none; padding: 0; overflow: hidden;
+    /* Tamanho fluido: mínimo 56px, ideal 14% da tela, máximo 72px */
+    width:  clamp(56px, 14vw, 72px);
+    height: clamp(56px, 14vw, 72px);
+    border-radius: 50%;          /* Formato circular */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    touch-action: manipulation;
+    transition: transform 0.2s, filter 0.2s;
+    -webkit-user-select: none;
+    user-select: none;
+    padding: 0;
+    overflow: hidden;
 }
+
+/* Imagem do microfone preenche o botão */
 .icone-microfone {
-    width: 100%; height: 100%; object-fit: cover;
-    border-radius: 50%; display: block; pointer-events: none;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+    pointer-events: none; /* Cliques passam pela imagem ao botão */
 }
-.status { font-size: clamp(12px, 3.5vw, 14px); color: #888; text-align: center; min-height: 20px; }
 
-/* ── 7. Lista ── */
+/* Texto de status abaixo do microfone */
+.status {
+    font-size: clamp(12px, 3.5vw, 14px);
+    color: #888;
+    text-align: center;
+    min-height: 20px; /* Reserva espaço mesmo quando vazio */
+}
+
+
+/* ═══════════════════════════════════════
+   8. LISTA DE ITENS
+
+   Cada linha tem:
+   • nome do item (clicável para marcar/desmarcar)
+   • preço em verde (clicável para abrir edição)
+   • botão excluir (ícone verde da lixeira)
+
+   Os botões de "editar nome" e "editar preço"
+   foram removidos — toda edição agora acontece
+   num único modal acessado pelo preço.
+═══════════════════════════════════════ */
+
 ul { list-style: none; }
-.item { padding: 14px 8px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 6px; }
+
+.item {
+    padding: 14px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .item:last-child { border-bottom: none; }
+
+/* Nome do item — toque para marcar/desmarcar como comprado */
 .item-nome {
-    flex: 1; min-width: 0;
-    font-size: clamp(15px, 4vw, 17px); color: #3a3a3a;
-    cursor: pointer; transition: color 0.2s;
-    word-break: break-word; padding: 4px 0;
+    flex: 1;
+    min-width: 0;
+    font-size: clamp(15px, 4vw, 17px);
+    color: #3a3a3a;
+    cursor: pointer;
+    transition: color 0.2s;
+    word-break: break-word; /* Evita overflow com nomes longos */
+    padding: 4px 0;
 }
-.item.marcado .item-nome { text-decoration: line-through; color: #b0b0b0; }
-.item-preco { font-weight: bold; color: #4caf50; font-size: clamp(13px, 3.5vw, 15px); white-space: nowrap; padding: 0 4px; }
-.acoes { display: flex; gap: 2px; flex-shrink: 0; }
-.btn-editar, .btn-preco, .btn-excluir {
-    border: none; background: none; cursor: pointer; padding: 6px;
-    border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    touch-action: manipulation; min-width: 36px; min-height: 36px; transition: background 0.15s;
-}
-.btn-editar:active  { background: #e8f0fe; }
-.btn-preco:active   { background: #e8f5e9; }
-.btn-excluir:active { background: #fce8e6; }
-.icone-acao { width: 22px; height: 22px; object-fit: contain; display: block; pointer-events: none; }
 
-/* ── 8. Total ── */
+/* Texto riscado quando o item está marcado como comprado */
+.item.marcado .item-nome {
+    text-decoration: line-through;
+    color: #b0b0b0;
+}
+
+/* Preço do item — em verde, clicável para abrir o modal de edição.
+   O cursor "pointer" indica que é interativo. */
+.item-preco {
+    font-weight: bold;
+    color: #16a34a;             /* Verde Listify */
+    font-size: clamp(13px, 3.5vw, 15px);
+    white-space: nowrap;
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;            /* Indica que o preço é clicável */
+    transition: background 0.15s;
+}
+
+/* Destaque verde claro ao pressionar o preço */
+.item-preco:active {
+    background: #dcfce7;
+}
+
+/* Área dos botões de ação (agora apenas o botão excluir) */
+.acoes {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+/* Botão excluir — fundo transparente, apenas o ícone visível */
+.btn-excluir {
+    border: none;
+    background: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    min-width: 38px;
+    min-height: 38px;
+    transition: background 0.15s;
+}
+
+.btn-excluir:active { background: #fee2e2; } /* Vermelho claro ao pressionar */
+
+/* Ícone da lixeira (excluir.png — lixeira verde) */
+.icone-acao {
+    width: 28px;                /* Um pouco maior pois só há um botão agora */
+    height: 28px;
+    object-fit: contain;
+    display: block;
+    pointer-events: none;       /* Cliques passam ao botão pai */
+}
+
+
+/* ═══════════════════════════════════════
+   9. TOTAL
+═══════════════════════════════════════ */
+
 .total {
-    text-align: right; padding: 14px 8px 4px;
-    font-size: clamp(16px, 4.5vw, 20px); font-weight: bold;
-    border-top: 2px solid #f0f0f0; color: #3a3a3a;
+    text-align: right;
+    padding: 14px 8px 4px;
+    font-size: clamp(16px, 4.5vw, 20px);
+    font-weight: bold;
+    border-top: 2px solid #f0f0f0;
+    color: #3a3a3a;
 }
 
-/* ── 9. Impressão ── */
-.area-impressao { display: flex; justify-content: center; margin-top: 8px; margin-bottom: 24px; }
+
+/* ═══════════════════════════════════════
+   10. BOTÃO DE IMPRESSÃO
+═══════════════════════════════════════ */
+
+.area-impressao {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+    margin-bottom: 24px;
+}
+
 .btn-imprimir {
-    display: flex; align-items: center; gap: 10px;
-    padding: 13px 28px; background-color: #ffffff; color: #3a3a3a;
-    border: 2px solid #ddd; border-radius: 12px;
-    font-size: clamp(14px, 4vw, 16px); font-weight: bold;
-    cursor: pointer; touch-action: manipulation; min-height: 48px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 28px;
+    background-color: #ffffff;
+    color: #3a3a3a;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    font-size: clamp(14px, 4vw, 16px);
+    font-weight: bold;
+    cursor: pointer;
+    touch-action: manipulation;
+    min-height: 48px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
     transition: background 0.2s, border-color 0.2s, transform 0.15s;
 }
-.btn-imprimir:hover  { background-color: #f0f4ff; border-color: #4285f4; color: #4285f4; }
-.btn-imprimir:active { transform: scale(0.97); background-color: #e8f0fe; }
-.icone-impressora    { width: 22px; height: 22px; fill: currentColor; flex-shrink: 0; }
 
-/* ── 10. Modais ── */
+.btn-imprimir:hover {
+    background-color: #f0f4ff;
+    border-color: #2563eb;
+    color: #2563eb;
+}
+
+.btn-imprimir:active {
+    transform: scale(0.97);
+    background-color: #eff6ff;
+}
+
+/* Ícone SVG da impressora — fill: currentColor herda a cor do botão */
+.icone-impressora {
+    width: 22px;
+    height: 22px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+
+/* ═══════════════════════════════════════
+   11. MODAL UNIFICADO — Editar item
+
+   Janela flutuante que agrupa edição de
+   NOME e VALOR em uma única tela.
+   Abre a partir do toque no preço do item.
+   Abre do rodapé em mobile, centralizado
+   em telas maiores.
+═══════════════════════════════════════ */
+
 .modal {
-    display: none;
-    position: fixed; inset: 0;
-    background-color: rgba(0,0,0,0.45);
+    display: none;           /* Oculto por padrão; JS exibe com style.display='flex' */
+    position: fixed;
+    inset: 0;                /* Cobre toda a tela */
+    background-color: rgba(0,0,0,0.48);
     z-index: 200;
-    align-items: flex-end; justify-content: center;
+    align-items: flex-end;   /* Modal ancorado no rodapé em mobile */
+    justify-content: center;
     padding: 16px;
-    /* Usa a variável dinâmica definida pelo JS via Visual Viewport API.
-       Quando o teclado abre, essa variável contém apenas a altura acima dele,
-       fazendo o modal se reposicionar automaticamente. */
+
+    /* Visual Viewport API: --altura-visivel é atualizada pelo JS
+       para refletir o espaço disponível quando o teclado abre */
     height: var(--altura-visivel, 100dvh);
     transition: height 0.15s ease;
 }
+
 .modal-conteudo {
-    background-color: white; padding: 24px 20px 20px;
-    border-radius: 20px; width: 100%; max-width: 420px;
+    background-color: white;
+    padding: 24px 20px 20px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 440px;
     box-shadow: 0 8px 30px rgba(0,0,0,0.15);
 }
-.modal-titulo { font-size: clamp(16px, 4.5vw, 18px); font-weight: bold; margin-bottom: 16px; text-align: center; color: #3a3a3a; }
-.modal input {
-    width: 100%; padding: 12px 14px; margin-bottom: 16px;
-    border: 1.5px solid #ddd; border-radius: 10px;
-    font-size: max(16px, 1em); color: #3a3a3a;
-    -webkit-appearance: none; appearance: none;
-}
-.modal input:focus { outline: none; border-color: #4285f4; }
-.modal-botoes { display: flex; gap: 10px; }
-.btn-modal { flex: 1; padding: 13px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; font-size: clamp(14px, 4vw, 16px); min-height: 48px; touch-action: manipulation; }
-.btn-confirmar { background-color: #4285f4; color: white; }
-.btn-confirmar:active { background-color: #2c6fd4; }
-.btn-cancelar  { background-color: #f1f1f1; color: #3a3a3a; }
-.btn-cancelar:active { background-color: #e0e0e0; }
 
-/* ── 11. Animação de gravação ── */
-.gravando { animation: piscar 1.2s infinite; }
+/* Título do modal */
+.modal-titulo {
+    font-size: clamp(16px, 4.5vw, 18px);
+    font-weight: bold;
+    margin-bottom: 18px;
+    text-align: center;
+    color: #1e293b;
+}
+
+/* Rótulo acima de cada campo */
+.modal-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;           /* Cinza azulado */
+    margin-bottom: 5px;
+    margin-top: 4px;
+}
+
+/* Campos de entrada do modal */
+.modal-input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    /* 16px mínimo evita zoom automático no iOS ao focar */
+    font-size: max(16px, 1em);
+    color: #1e293b;
+    background: #f8fafc;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: border-color 0.15s;
+}
+
+.modal-input:focus {
+    outline: none;
+    border-color: #2563eb;   /* Azul Listify ao focar */
+    background: white;
+}
+
+/* Linha com botões Cancelar e Confirmar */
+.modal-botoes {
+    display: flex;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.btn-modal {
+    flex: 1;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: clamp(14px, 4vw, 16px);
+    min-height: 48px;
+    touch-action: manipulation;
+}
+
+/* Confirmar — azul Listify */
+.btn-confirmar          { background-color: #2563eb; color: white; }
+.btn-confirmar:active   { background-color: #1d4ed8; }
+
+/* Cancelar — cinza neutro */
+.btn-cancelar           { background-color: #f1f5f9; color: #334155; }
+.btn-cancelar:active    { background-color: #e2e8f0; }
+
+
+/* ═══════════════════════════════════════
+   12. ANIMAÇÃO DE GRAVAÇÃO
+   O botão do microfone pulsa em brilho
+   enquanto está ouvindo.
+═══════════════════════════════════════ */
+
+.gravando {
+    animation: piscar 1.2s infinite;
+}
+
 @keyframes piscar {
     0%   { filter: brightness(0.85); transform: scale(1);   }
     50%  { filter: brightness(1.15); transform: scale(1.1); }
     100% { filter: brightness(0.85); transform: scale(1);   }
 }
 
-/* ── 12. Responsividade ── */
+
+/* ═══════════════════════════════════════
+   13. RESPONSIVIDADE
+═══════════════════════════════════════ */
+
+/* Tablet: telas a partir de 480px */
 @media (min-width: 480px) {
-    body   { padding: 24px 20px; }
-    .caixa { padding: 24px; }
-    .modal { align-items: center; height: 100dvh; }
-}
-@media (min-width: 768px) {
-    body { padding: 40px 24px; }
-    h1   { margin-bottom: 24px; }
+    body    { padding: 24px 20px; }
+    .caixa  { padding: 24px; }
+    /* Modal centralizado (não mais ancorado no rodapé) */
+    .modal  { align-items: center; height: 100dvh; }
 }
 
-/* ── 13. Impressão ── */
+/* Desktop: telas a partir de 768px */
+@media (min-width: 768px) {
+    body { padding: 40px 24px; }
+    .cabecalho { margin-bottom: 28px; }
+}
+
+
+/* ═══════════════════════════════════════
+   14. ESTILOS DE IMPRESSÃO
+
+   Gera uma tabela limpa e moderna com:
+   • Margens de 3cm nas laterais
+   • Cabeçalho com nome Listify e data
+   • Tabela com linhas alternadas (zebra)
+   • Coluna de preços alinhada à direita
+   • Total em destaque abaixo da tabela
+═══════════════════════════════════════ */
+
 @media print {
-    body { background-color: white; padding: 0; font-size: 12pt; }
-    .caixa { box-shadow: none; border: 1px solid #ccc; border-radius: 0; margin-bottom: 12pt; padding: 12pt; }
-    .entrada-texto, .separador, .entrada-voz, .acoes, .area-impressao, .modal { display: none !important; }
-    h1 { font-size: 18pt; margin-bottom: 12pt; color: black; }
-    .item { padding: 8pt 4pt; border-bottom: 1px solid #ddd; page-break-inside: avoid; }
-    .item-nome { font-size: 12pt; color: black; }
-    .item.marcado .item-nome { text-decoration: line-through; color: #888; }
-    .item-preco { font-size: 11pt; color: black; }
-    .total { font-size: 14pt; color: black; border-top: 2px solid #333; padding-top: 8pt; }
+
+    /* ── Configuração da página impressa ── */
+    @page {
+        /* Margens: 2cm topo/baixo, 3cm esquerda/direita */
+        margin: 2cm 3cm;
+        size: A4 portrait;
+    }
+
+    /* Fundo branco, sem padding extra (as margens já vêm do @page) */
+    body {
+        background: white;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        font-size: 11pt;
+        color: #111;
+    }
+
+    /* Oculta tudo que não deve aparecer no papel */
+    .cabecalho .logo-icone,   /* Oculta o ícone (fica apenas o nome) */
+    .entrada-texto,
+    .separador,
+    .entrada-voz,
+    .acoes,
+    .area-impressao,
+    .modal,
+    .caixa:first-of-type {    /* Oculta a caixa de entrada (campos de digitação) */
+        display: none !important;
+    }
+
+    /* Remove sombra e borda arredondada na impressão */
+    .caixa {
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* ── Cabeçalho do documento impresso ── */
+    .cabecalho {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: baseline;
+        border-bottom: 2.5pt solid #2563eb; /* Linha azul abaixo do título */
+        padding-bottom: 8pt;
+        margin-bottom: 14pt;
+    }
+
+    /* Nome Listify em azul sólido (gradiente não imprime bem) */
+    .logo-texto {
+        font-size: 20pt;
+        font-weight: 900;
+        background: none !important;
+        -webkit-text-fill-color: #2563eb !important;
+        color: #2563eb !important;
+    }
+
+    /* Data de impressão gerada pelo CSS no lado direito do cabeçalho */
+    .cabecalho::after {
+        content: "Impresso em: " attr(data-data);
+        font-size: 9pt;
+        color: #64748b;
+    }
+
+    /* ── Tabela de itens ──
+       Convertemos a lista (<ul>) em tabela para impressão. */
+    ul {
+        display: table;
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    /* Cabeçalho da tabela — gerado via CSS em um pseudo-elemento */
+    ul::before {
+        content: "";
+        display: table-header-group;
+    }
+
+    .item {
+        display: table-row;
+        page-break-inside: avoid; /* Evita cortar um item entre duas páginas */
+    }
+
+    /* Células de cada linha */
+    .item-nome,
+    .item-preco {
+        display: table-cell;
+        padding: 6pt 4pt;
+        border-bottom: 0.5pt solid #e2e8f0;
+        vertical-align: middle;
+    }
+
+    /* Nome ocupa toda a largura disponível */
+    .item-nome {
+        font-size: 11pt;
+        color: #111;
+        width: 100%;
+    }
+
+    /* Linhas alternadas (zebra) — mais fácil de ler */
+    .item:nth-child(even) .item-nome,
+    .item:nth-child(even) .item-preco {
+        background-color: #f8fafc;
+    }
+
+    /* Cabeçalho de colunas simulado como primeira linha especial */
+    .item:first-child .item-nome::before {
+        content: "PRODUTO";
+        display: block;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5pt;
+        text-transform: uppercase;
+        padding-bottom: 3pt;
+        border-bottom: 1pt solid #cbd5e1;
+        margin-bottom: 4pt;
+    }
+
+    .item:first-child .item-preco::before {
+        content: "PREÇO";
+        display: block;
+        font-size: 8pt;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 0.5pt;
+        text-transform: uppercase;
+        padding-bottom: 3pt;
+        border-bottom: 1pt solid #cbd5e1;
+        margin-bottom: 4pt;
+    }
+
+    /* Itens marcados como comprados ficam riscados e acinzentados */
+    .item.marcado .item-nome {
+        text-decoration: line-through;
+        color: #94a3b8;
+    }
+
+    /* Preço alinhado à direita, fonte monoespaçada para alinhar valores */
+    .item-preco {
+        font-size: 11pt;
+        font-weight: bold;
+        color: #111;
+        text-align: right;
+        white-space: nowrap;
+        font-family: "Courier New", monospace;
+    }
+
+    /* ── Total ── */
+    .total {
+        font-size: 13pt;
+        font-weight: bold;
+        color: #111;
+        text-align: right;
+        border-top: 2pt solid #2563eb; /* Linha azul acima do total */
+        padding-top: 8pt;
+        margin-top: 4pt;
+        font-family: "Courier New", monospace;
+    }
+
     .pagina { max-width: 100%; margin: 0; }
 }
